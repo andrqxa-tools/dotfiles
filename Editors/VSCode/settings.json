@@ -1,76 +1,225 @@
 {
-    "go.testOnSave": true,
-    "go.lintOnSave": "package",
-    "go.formatTool": "goimports",
-    "go.testFlags": [
-        "-v"
-    ],
-    "go.autocompleteUnimportedPackages": true,
-    "[go]": {
-        "editor.insertSpaces": false,
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": true
-        }
-    },
-    "terminal.integrated.shell.windows": "C:\\Program Files\\Git\\bin\\bash.exe",
-    "go.delveConfig": {
+  // =====================================================
+  // ================== WORKBENCH =========================
+  // =====================================================
 
-        "dlvLoadConfig": {
-            "followPointers": true,
-            "maxVariableRecurse": 1,
-            "maxStringLen": 64,
-            "maxArrayValues": 64,
-            "maxStructFields": -1
-        },
-        "apiVersion": 2,
-        "showGlobalVariables": false
+  "workbench.colorTheme": "Default Dark Modern",
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.startupEditor": "none",
+  "workbench.settings.editor": "json",
+
+  // =====================================================
+  // =================== EDITOR ===========================
+  // =====================================================
+
+  "editor.fontFamily": "JetBrainsMono Nerd Font",
+  "editor.fontLigatures": true,
+  "editor.fontSize": 15,
+  "editor.lineHeight": 22,
+  "editor.minimap.enabled": false,
+  "editor.renderWhitespace": "selection",
+  "editor.rulers": [100],
+  "editor.formatOnSave": false,
+  "editor.snippetSuggestions": "top",
+  "editor.multiCursorModifier": "alt",
+
+  "files.eol": "\n",
+
+  // Исключаем тяжёлые директории из watcher/search
+  "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/vendor/**": true
+  },
+
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/vendor": true,
+    "**/dist": true,
+    "**/build": true
+  },
+
+  // =====================================================
+  // ===================== GO =============================
+  // =====================================================
+
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit",
+      "source.fixAll": "explicit"
+    }
+  },
+
+  "go.useLanguageServer": true,
+  "go.formatTool": "goimports",
+  "go.lintTool": "staticcheck",
+  "go.lintOnSave": "package",
+  "go.testOnSave": false,
+  "go.testFlags": [
+    "-race",
+    "-v"
+  ],
+  "go.buildFlags": [
+    "-trimpath"
+  ],
+  "go.toolsManagement.autoUpdate": true,
+
+  "go.enableCodeLens": {
+    "references": true,
+    "runtest": true
+  },
+
+  "go.delveConfig": {
+    "apiVersion": 2,
+    "dlvLoadConfig": {
+      "followPointers": true,
+      "maxArrayValues": 64,
+      "maxStringLen": 128,
+      "maxStructFields": -1,
+      "maxVariableRecurse": 1
     },
-    "go.gopath": "C:\\Projects\\go",
-    "[dart]": {
-        "editor.formatOnSave": true,
-        "editor.formatOnType": true,
-        "editor.rulers": [
-            80
-        ],
-        "editor.selectionHighlight": false,
-        "editor.suggest.snippetsPreventQuickSuggestions": false,
-        "editor.suggestSelection": "first",
-        "editor.tabCompletion": "onlySnippets",
-        "editor.wordBasedSuggestions": false
+    "showGlobalVariables": false
+  },
+
+  "go.editorContextMenuCommands": {
+    "addImport": true,
+    "addTags": true,
+    "debugTestAtCursor": true,
+    "generateTestForFunction": true,
+    "testAtCursor": true,
+    "testCoverage": true,
+    "toggleTestFile": true
+  },
+
+  "gopls": {
+    "staticcheck": true,
+    "analyses": {
+      "unusedparams": true,
+      "shadow": true,
+      "nilness": true,
+      "unusedwrite": true,
+      "fieldalignment": true
     },
-    "explorer.confirmDelete": false,
-    "todo-tree.tree.showScanModeButton": false,
-    "workbench.iconTheme": "material-icon-theme",
-      "[javascript]": {
+    "hints": {
+      "assignVariableTypes": true,
+      "constantValues": true,
+      "rangeVariableTypes": true
+    }
+  },
+
+  // =====================================================
+  // ==================== PYTHON ==========================
+  // =====================================================
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true
-    },
-    "[vue]": {
-      "editor.formatOnSave": true
-    },
-    "editor.fontFamily": "Fira Code",
-    "editor.fontLigatures": true,
-    "editor.fontSize": 13,
-    "editor.lineHeight": 24,
-    "editor.minimap.enabled": false,
-    "editor.multiCursorModifier": "alt",
-    "editor.quickSuggestions": {
-      "comments": false,
-      "other": true,
-      "strings": true
-    },
-    "editor.rulers": [
-      80
-    ],
-    "editor.snippetSuggestions": "top",
-    "emmet.triggerExpansionOnTab": true,
-    "extensions.ignoreRecommendations": false,
-    "git.autofetch": true,
-    "git.confirmSync": false,
-    "go.useLanguageServer": true,
-    "todo-tree.highlights.enabled": true,
-    "window.zoomLevel": 0,
-    "workbench.colorTheme": "One Dark Pro",
-    "workbench.settings.editor": "json",
-    "workbench.startupEditor": "none"
+  },
+
+  "ruff.fixAll": true,
+  "ruff.organizeImports": true,
+  "python.analysis.typeCheckingMode": "basic",
+
+  // =====================================================
+  // ===================== ZIG ============================
+  // =====================================================
+
+  "[zig]": {
+    "editor.defaultFormatter": "ziglang.vscode-zig",
+    "editor.formatOnSave": true
+  },
+
+  "zig.zls.enabled": "on",
+
+  // =====================================================
+  // ==================== FACTOR ==========================
+  // =====================================================
+
+  "[factor]": {
+    "editor.formatOnSave": false
+  },
+
+  // =====================================================
+  // ===================== VUE ============================
+  // =====================================================
+
+  "[vue]": {
+    "editor.defaultFormatter": "vue.volar",
+    "editor.formatOnSave": true
+  },
+
+  // =====================================================
+  // ================== DEVOPS ============================
+  // =====================================================
+
+  "[dockerfile]": {
+    "editor.formatOnSave": true
+  },
+
+  "docker.extension.enableComposeLanguageServer": true,
+
+  // =====================================================
+  // =================== FORMATS ==========================
+  // =====================================================
+
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.formatOnSave": true
+  },
+
+  "[toml]": {
+    "editor.formatOnSave": true
+  },
+
+  "[json]": {
+    "editor.formatOnSave": true
+  },
+
+  "[xml]": {
+    "editor.formatOnSave": true
+  },
+
+  "[csv]": {
+    "editor.formatOnSave": false
+  },
+
+  // =====================================================
+  // ===================== GIT ============================
+  // =====================================================
+
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "git.openRepositoryInParentFolders": "always",
+
+  // =====================================================
+  // ===================== TERMINAL =======================
+  // =====================================================
+
+  "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
+  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.shell.linux": "/bin/bash",
+
+  // =====================================================
+  // ===================== AI =============================
+  // =====================================================
+
+  "openai.chatgpt.enableCodeActions": true,
+  "openai.chatgpt.enableInlineCompletions": true,
+  "openai.chatgpt.enableHoverActions": false,
+  "openai.chatgpt.promptPrefix": "",
+  "openai.chatgpt.maxTokens": 2048,
+  "openai.chatgpt.temperature": 0.15,
+
+  // =====================================================
+  // =================== SECURITY =========================
+  // =====================================================
+
+  "security.workspace.trust.untrustedFiles": "open"
 }
