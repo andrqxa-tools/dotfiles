@@ -16,3 +16,4 @@ Thumbs.db
 **/.emacs.d/recentf
 **/.emacs.d/savehist
 **/.emacs.d/var/
+**/.emacs.d/custom.el

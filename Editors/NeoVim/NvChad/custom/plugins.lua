@@ -14,7 +14,7 @@ local plugins = {
     end
   },
   {
-    "dreamsofcode-io/nvim-dap-go",
+    "leoluz/nvim-dap-go",
     ft = "go",
     dependencies = "mfussenegger/nvim-dap",
     config = function(_, opts)
@@ -33,7 +33,7 @@ local plugins = {
     "nvimtools/none-ls.nvim",
     ft = "go",
     opts = function()
-      return require "custom.configs.null-ls"
+      return require "custom.configs.none-ls"
     end,
   },
   {
