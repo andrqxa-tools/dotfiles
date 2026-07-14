@@ -16,7 +16,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 
 | Path | What's inside |
 |------|---------------|
-| `Editors/VSCode/` | `settings.json` + `vscode-extensions.txt` (extension list) |
+| `Editors/VSCode/` | `settings.json` (extensions are handled by VS Code Settings Sync) |
 | `Editors/NeoVim/NvChad/custom/` | NvChad `custom/` overrides (LSP, DAP, gopher, none-ls) |
 | `Editors/Emacs/.emacs.d/` | `init.el` with `ide`/`lean` profiles + `lisp/go-config.el` |
 | `Editors/helix/` | `config.toml` |
@@ -48,11 +48,7 @@ ln -sf "$PWD/Editors/helix/config.toml" ~/.config/helix/config.toml
 ln -sf "$PWD/Editors/micro/settings.json" ~/.config/micro/settings.json
 ```
 
-Restore the VS Code extension list with:
-
-```sh
-cat Editors/VSCode/vscode-extensions.txt | xargs -L1 code --install-extension
-```
+VS Code extensions are managed by built-in Settings Sync, not tracked here.
 
 ## Scripts
 
