@@ -84,6 +84,19 @@ powershell -ExecutionPolicy Bypass -File Go\go-install.ps1 -Version 1.26.2   # p
 - Windows: GOROOT `C:\Programms\go`, GOPATH `%USERPROFILE%\go`; persistent
   per-user env vars + PATH (visible to console and GUI). Re-run to upgrade.
 
+Installing Go does **not** update the tools in `$GOPATH/bin` (gopls, dlv,
+staticcheck, …). After a major Go upgrade, rebuild them at latest:
+
+```sh
+./Go/update-go-tools.sh                    # Linux
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File Go\update-go-tools.ps1   # Windows
+```
+
+The list is auto-discovered from each binary's module info; `golangci-lint`
+is skipped (it runs from a pinned Docker image — bump that by hand).
+
 Scaffold a new Go project:
 
 ```sh
