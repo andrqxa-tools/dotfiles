@@ -64,9 +64,26 @@ VS Code extensions are managed by built-in Settings Sync, not tracked here.
 
 ### Go
 
+Install / update the toolchain:
+
 ```sh
-./Go/go-install.sh 1.23.0                 # install Go, prompts for arch, wires GOROOT/GOPATH
-./Go/create_go_project.sh myapp 8080      # scaffold a Go project (name + port)
+./Go/go-install.sh 1.26.2                  # Linux: install/update Go, wires GOROOT/GOPATH
+```
+```powershell
+# Windows: install/update to the latest release (auto-detects arch)
+powershell -ExecutionPolicy Bypass -File Go\go-install.ps1
+powershell -ExecutionPolicy Bypass -File Go\go-install.ps1 -Version 1.26.2   # pin a version
+```
+
+- Linux: GOROOT `/opt/programming/go`, GOPATH `$HOME/go`; env written to
+  `~/.config/profile.d/go.sh` (+ fish `conf.d/go.fish`), wired for bash/zsh/fish.
+- Windows: GOROOT `C:\Programms\go`, GOPATH `%USERPROFILE%\go`; persistent
+  per-user env vars + PATH (visible to console and GUI). Re-run to upgrade.
+
+Scaffold a new Go project:
+
+```sh
+./Go/create_go_project.sh myapp 8080       # name + port
 ```
 On Windows: `Go\create-go-project.bat myapp`.
 
