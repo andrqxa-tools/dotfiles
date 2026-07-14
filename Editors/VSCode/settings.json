@@ -1,12 +1,11 @@
 {
-  // =====================================================
-  // ================== WORKBENCH =========================
-  // =====================================================
-
-  "workbench.colorTheme": "Default Dark Modern",
   "workbench.iconTheme": "material-icon-theme",
   "workbench.startupEditor": "none",
   "workbench.settings.editor": "json",
+
+  "plantuml.includepaths": [
+    "/home/andrejjj/Install/graphics/c4-plantuml/C4-PlantUML-2.13.0"
+  ],
 
   // =====================================================
   // =================== EDITOR ===========================
@@ -14,7 +13,7 @@
 
   "editor.fontFamily": "JetBrainsMono Nerd Font",
   "editor.fontLigatures": true,
-  "editor.fontSize": 15,
+  "editor.fontSize": 13,
   "editor.lineHeight": 22,
   "editor.minimap.enabled": false,
   "editor.renderWhitespace": "selection",
@@ -218,6 +217,24 @@
   "openai.chatgpt.promptPrefix": "",
   "openai.chatgpt.maxTokens": 2048,
   "openai.chatgpt.temperature": 0.15,
+
+  "gitlens.ai.model": "vscode",
+  "gitlens.ai.vscode.model": "copilot:gpt-4.1",
+  "chat.mcp.gallery.enabled": true,
+
+  // =====================================================
+  // ==================== DART / FLUTTER ==================
+  // =====================================================
+
+  "dart.flutterSdkPath": "/opt/programming/flutter",
+
+  // =====================================================
+  // =================== MISC / UX ========================
+  // =====================================================
+
+  "makefile.configureOnOpen": false,
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
 
   // =====================================================
   // =================== SECURITY =========================
