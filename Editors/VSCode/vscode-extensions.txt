@@ -5,7 +5,6 @@ dotjoshjohnson.xml
 eamodio.gitlens
 editorconfig.editorconfig
 foxundermoon.shell-format
-github.copilot-chat
 golang.go
 mechatroner.rainbow-csv
 ms-azuretools.vscode-containers
