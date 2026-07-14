@@ -1,110 +1,118 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Manual Go installer.
+#   GOROOT -> /opt/programming/go   (the toolchain itself)
+#   GOPATH -> $HOME/go              (modules, binaries, caches)
+# Environment is written to ~/.config/profile.d/go.sh, which is sourced by
+# both login shells (GUI session via ~/.profile) and interactive shells
+# (~/.bashrc), so the paths are available everywhere.
 
 if [[ $# -lt 1 ]]; then
-echo "Usage: ./go-install <version-of-go-to-install>" ;
-exit 1;
+  echo "Usage: $0 <go-version>   e.g. $0 1.26.2"
+  exit 1
 fi
 
-echo "Which architecture do you want to select?"
+VERSION="$1"
 
-archs=("386" "amd64" "armv6l" "arm64")
-
-select ARCH in "${archs[@]}"; do
-  case $ARCH in
-    "386")
-      echo "You have chosen $ARCH."
-      break
-      ;;
-    "amd64")
-      echo "You have chosen $ARCH."
-      break
-      ;;
-    "armv6l")
-      echo "You have chosen $ARCH."
-      break
-      ;;
-    "arm64")
-      echo "You have chosen $ARCH."
-      break
-      ;;
-  esac
+# --- pick architecture --------------------------------------------------
+echo "Which architecture do you want to install?"
+select ARCH in "386" "amd64" "armv6l" "arm64"; do
+  if [[ -n "${ARCH:-}" ]]; then
+    echo "Selected: $ARCH"
+    break
+  fi
+  echo "Invalid choice, try again."
 done
 
+# --- paths --------------------------------------------------------------
+GO_HOME=/opt/programming     # parent dir for the toolchain
+GOROOT="$GO_HOME/go"
+GOPATH="$HOME/go"
+GOMODCACHE="$GOPATH/pkg/mod"
+GOCACHE="$HOME/.cache/go-build"
 
-VERSION=$1 # pick the latest version from https://golang.org/dl/
-# ARCH=$2 # amd64 # arm64 for 64-bit OS
+ENV_DIR="$HOME/.config/profile.d"
+ENV_FILE="$ENV_DIR/go.sh"
+TARBALL="go${VERSION}.linux-${ARCH}.tar.gz"
 
-MY_HOME=/home/$USER
-GO_HOME=/opt/programming
-PROJECTS=$MY_HOME/projects
-GO_PATH=$PROJECTS/go
+# /opt is conventionally root-owned; use sudo only when we lack write access.
+run_root() {
+  if [ -w "$(dirname "$GO_HOME")" ] && { [ ! -e "$GO_HOME" ] || [ -w "$GO_HOME" ]; }; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
 
-## Remove old version if it exists
-rm -rf $GO_HOME/go
+# --- download + extract the toolchain -----------------------------------
+echo "Downloading Go $VERSION ($ARCH)..."
+curl -fLo "/tmp/$TARBALL" "https://dl.google.com/go/$TARBALL"
 
-## Create folder for programm
-mkdir -p $GO_HOME
-mkdir -p $GO_PATH/src
-mkdir -p $GO_PATH/pkg
-mkdir -p $GO_PATH/bin
+echo "Installing toolchain to $GOROOT..."
+run_root mkdir -p "$GO_HOME"
+run_root rm -rf "$GOROOT"
+run_root tar -C "$GO_HOME" -xzf "/tmp/$TARBALL"
+rm -f "/tmp/$TARBALL"
 
-## Detect the user's shell and add the appropriate path variables
-SHELL_TYPE=$(basename "$SHELL")
+# --- create GOPATH layout -----------------------------------------------
+mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" "$GOCACHE"
 
-if [ "$SHELL_TYPE" = "zsh" ]; then
-    echo "Found ZSH shell"
-    SHELL_RC="$MY_HOME/.zshrc"
-elif [ "$SHELL_TYPE" = "bash" ]; then
-    echo "Found Bash shell"
-    SHELL_RC="$MY_HOME/.bashrc"
-elif [ "$SHELL_TYPE" = "fish" ]; then
-    echo "Found Fish shell"
-    SHELL_RC="$MY_HOME/.config/fish/config.fish"
+# --- write the environment file (regenerated, never appended) -----------
+echo "Writing environment to $ENV_FILE..."
+mkdir -p "$ENV_DIR"
+cat > "$ENV_FILE" <<EOF
+# Managed by dotfiles/Go/go-install.sh — regenerated on each install.
+export GOROOT=$GOROOT
+export GOPATH="\$HOME/go"
+export GOMODCACHE="\$GOPATH/pkg/mod"
+export GOCACHE="\$HOME/.cache/go-build"
+export PATH="\$GOROOT/bin:\$GOPATH/bin:\$PATH"
+
+# Uncomment and set if you use private modules:
+# export GOPRIVATE="github.com/yourorg/*"
+EOF
+
+# --- ensure profile.d is sourced from console, GUI and login shells -----
+# Idempotent: skip a file that already sources ~/.config/profile.d in any form.
+ensure_profile_d() {
+  local rc="$1" create="${2:-no}"
+  if [ ! -f "$rc" ]; then
+    [ "$create" = "create" ] || return 0
+    : > "$rc"
+  fi
+  if grep -q '\.config/profile\.d' "$rc"; then
+    echo "  loader already present in $rc"
+    return 0
+  fi
+  echo "  adding profile.d loader to $rc"
+  cat >> "$rc" <<'EOF'
+
+# >>> ~/.config/profile.d loader >>>
+if [ -d "$HOME/.config/profile.d" ]; then
+  for f in "$HOME/.config/profile.d/"*.sh; do
+    [ -r "$f" ] && . "$f"
+  done
+fi
+# <<< ~/.config/profile.d loader <<<
+EOF
+}
+
+echo "Wiring profile.d loader..."
+ensure_profile_d "$HOME/.profile" create   # GUI/login session
+ensure_profile_d "$HOME/.bashrc"  create   # interactive terminals
+# bash reads .bash_profile for login shells and then IGNORES .profile/.bashrc,
+# so it needs the loader too — but only if it already exists (its mere
+# presence is what shadows .profile).
+ensure_profile_d "$HOME/.bash_profile"
+
+# --- verify -------------------------------------------------------------
+INSTALLED="$("$GOROOT/bin/go" version | awk '{print $3}')"
+if [ "$INSTALLED" = "go$VERSION" ]; then
+  echo "Go $VERSION installed successfully ($GOROOT)."
 else
-    echo "Unsupported shell: $SHELL_TYPE"
-    exit 1
+  echo "WARNING: installed version ($INSTALLED) != requested (go$VERSION)."
 fi
 
-## Download the latest version of Golang
-echo "Downloading Go $VERSION"
-wget https://dl.google.com/go/go$VERSION.linux-$ARCH.tar.gz
-echo "Downloading Go $VERSION completed"
-
-## Extract the archive
-echo "Extracting..."
-tar -C $GO_HOME -xzf go$VERSION.linux-$ARCH.tar.gz
-echo "Extraction complete"
-
-
-echo $SHELL_RC
-# Independent checks: GOROOT and GOPATH must each be added if missing.
-if [ -z "${GOROOT}" ]; then
-  echo "export GOROOT=$GO_HOME/go" >> "$SHELL_RC"
-  echo "export PATH=\$GOROOT/bin:\$PATH" >> "$SHELL_RC"
-fi
-
-if [ -z "${GOPATH}" ]; then
-  echo "export GOPATH=$GO_PATH" >> "$SHELL_RC"
-  echo "export PATH=\$GOPATH/bin:\$PATH" >> "$SHELL_RC"
-fi
-
-## Verify the installation
-if [ -x "$(command -v go)" ]; then
-    INSTALLED_VERSION=$(go version | awk '{print $3}')
-    if [ "$INSTALLED_VERSION" == "go$VERSION" ]; then
-        echo "Go $VERSION is installed successfully."
-    else
-        echo "Installed Go version ($INSTALLED_VERSION) doesn't match the expected version (go$VERSION)."
-    fi
-else
-    echo "Go is not found in the PATH. Make sure to add Go's bin directory to your PATH."
-fi
-
-## Clean up
-rm go$VERSION.linux-$ARCH.tar.gz
-
-# Set permissions
-# chown -R $USER:$USER $GO_HOME/go
-# chown -R $USER:$USER $PROJECTS
-# ls -la $GO_HOME/go
-# ls -la $GO_PATH
+echo
+echo "Done. Open a new terminal, or run:  source $ENV_FILE"
