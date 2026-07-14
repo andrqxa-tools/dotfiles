@@ -1,223 +1,308 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Check for project name argument
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <project_name> <http_port>"
-    exit 1
+# Scaffold a Go project.
+#   Usage: create_go_project.sh [name] [type] [port]
+#     type : web | microservice | clean | minimal   (prompted if omitted)
+#     port : listen port, default 8080
+#
+# Generates a working net/http server (with /healthz + graceful shutdown),
+# a Taskfile (Make replacement), a Dockerfile (alpine) + compose, and a
+# type-specific directory layout. Empty dirs get a .gitkeep so they survive
+# git. Linting runs through a pinned golangci-lint Docker image so everyone
+# uses the exact same version.
+
+GOLANGCI_IMAGE="golangci/golangci-lint:v2.12.2"
+
+NAME="${1:-}"
+TYPE="${2:-}"
+PORT="${3:-}"
+
+# --- gather inputs ------------------------------------------------------
+if [ -z "$NAME" ]; then read -rp "Project name: " NAME; fi
+[ -n "$NAME" ] || { echo "Project name is required." >&2; exit 1; }
+
+if [ -z "$TYPE" ]; then
+  echo "Project type:"
+  select t in web microservice clean minimal; do
+    [ -n "${t:-}" ] && TYPE="$t" && break
+    echo "Invalid choice, try again."
+  done
 fi
 
-PROJECT_NAME=$1
-HTTP_PORT=$2
+PORT="${PORT:-8080}"
 
-# Create the directory structure
-mkdir -p "$PROJECT_NAME/cmd/$PROJECT_NAME"
-mkdir -p "$PROJECT_NAME/pkg/api/v1"
-mkdir -p "$PROJECT_NAME/pkg/db"
-mkdir -p "$PROJECT_NAME/pkg/util"
-mkdir -p "$PROJECT_NAME/internal/auth"
-mkdir -p "$PROJECT_NAME/api"
-mkdir -p "$PROJECT_NAME/configs"
-mkdir -p "$PROJECT_NAME/scripts"
-mkdir -p "$PROJECT_NAME/test"
+# Go minor version for the builder image, matched to the local toolchain.
+GO_MM="$(go env GOVERSION 2>/dev/null | sed -E 's/^go([0-9]+\.[0-9]+).*/\1/')"
+[ -n "$GO_MM" ] || GO_MM="1.26"
 
-# Initialize a new Go module in the project directory
-cd "$PROJECT_NAME"
-go mod init "$PROJECT_NAME"
+# --- directory layout ---------------------------------------------------
+keep() { mkdir -p "$1"; touch "$1/.gitkeep"; }
 
-# Create a simple main.go file
-cat <<EOF > "cmd/$PROJECT_NAME/main.go"
+mkdir -p "$NAME/cmd/$NAME" "$NAME/configs"
+
+case "$TYPE" in
+  web)
+    keep "$NAME/internal/handler"
+    keep "$NAME/internal/service"
+    keep "$NAME/internal/repository"
+    keep "$NAME/internal/model"
+    keep "$NAME/web/templates"
+    keep "$NAME/web/static"
+    keep "$NAME/migrations"
+    ;;
+  microservice)
+    keep "$NAME/internal/handler"
+    keep "$NAME/internal/service"
+    keep "$NAME/internal/repository"
+    keep "$NAME/internal/model"
+    keep "$NAME/api/proto"
+    keep "$NAME/deploy"
+    keep "$NAME/migrations"
+    ;;
+  clean)
+    keep "$NAME/internal/domain"
+    keep "$NAME/internal/usecase"
+    keep "$NAME/internal/adapter/handler"
+    keep "$NAME/internal/adapter/repository"
+    keep "$NAME/internal/infrastructure"
+    ;;
+  minimal)
+    keep "$NAME/internal"
+    ;;
+  *)
+    echo "Unknown type: $TYPE (want web|microservice|clean|minimal)" >&2
+    exit 1
+    ;;
+esac
+
+cd "$NAME"
+go mod init "$NAME"
+
+# --- cmd/<name>/main.go -------------------------------------------------
+cat > "cmd/$NAME/main.go" <<EOF
 package main
 
 import (
-    "fmt"
-    "log"
-    "os"
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-    "$PROJECT_NAME/configs"
+	"$NAME/configs"
 )
 
 func main() {
-    // Port is read from the environment so both \`make run\` and the
-    // container (CMD ["./app"]) start without positional arguments.
-    addr := os.Getenv("HTTP_ADDR")
-    if addr == "" {
-        addr = ":$HTTP_PORT"
-    }
-
-    if err := run(); err != nil {
-        log.Fatal(err)
-    }
-
-    fmt.Println("Hello, $PROJECT_NAME! Listening on", addr)
-
-    os.Exit(0)
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func run() error {
-    // read config from env
-    _ = configs.Read()
+	cfg := configs.Load()
 
-    return nil
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	srv := &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		log.Printf("listening on %s", cfg.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		log.Println("shutting down...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutdownCtx)
+	}
 }
 EOF
 
-cat <<EOF > "configs/mainConfig.go"
+# --- configs/config.go --------------------------------------------------
+cat > "configs/config.go" <<EOF
 package configs
 
-func Read() error {
-    return nil
+import "os"
+
+// Config holds runtime configuration read from the environment.
+type Config struct {
+	Addr string
+}
+
+// Load reads configuration from the environment, applying defaults.
+func Load() Config {
+	addr := os.Getenv("HTTP_ADDR")
+	if addr == "" {
+		addr = ":$PORT"
+	}
+	return Config{Addr: addr}
 }
 EOF
 
-# Create simple .gitignore
-cat <<EOF > ".gitignore"
-# === Golang specific ===
-# Compiled Object files, Static and Dynamic libs (Shared Objects)
-*.o
-*.a
-*.so
+# --- .gitignore ---------------------------------------------------------
+cat > ".gitignore" <<EOF
+# Binaries
+/$NAME
+/$NAME.exe
 *.exe
-**/*.exe
-*.exe~
-*.dll
-*.dylib
-
-# Folders
-_obj
-_test
-
-# Architecture specific extensions/prefixes
-*.[568vq]
-[568vq].out
-*.cgo1.go
-*.cgo2.c
-_cgo_defun.c
-_cgo_gotypes.go
-_cgo_export.*
-_testmain.go
+*.test
+*.out
 *.prof
 
-# Test binary, built with 'go test -c'
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# === Dependency directories (remove the comment below to include it) ===
-# vendor/
-
-# Go workspace file
+# Go
 go.work
+go.work.sum
+vendor/
 
-# === VS Code specific ===
+# Env / secrets
+.env
+*.local
+
+# Editors
 .vscode/*
 !.vscode/settings.json
-!.vscode/tasks.json
 !.vscode/launch.json
+!.vscode/tasks.json
 !.vscode/extensions.json
-*.code-workspace
-
-# Local History for Visual Studio Code
-.history/
-
-# === IntelliJ Idea specific ===
 .idea/
-
-# Git merge
 *.orig
 
-# === Project specific ===
-/tmp
-
-# NAME_OF_APPLICATION (from Makefile) - for avoiding linux executing files
-$PROJECT_NAME
-${PROJECT_NAME}.exe
-
-# === Docker specific ===
+# Docker / runtime
 **/db-data/*
+/tmp
 EOF
 
-# Create simple Makefile
-cat <<EOF > "Makefile"
-.PHONY: dc run test lint
+# --- Taskfile.yml (Make replacement) ------------------------------------
+cat > "Taskfile.yml" <<EOF
+version: "3"
 
-dc:
-	docker-compose up --remove-orphans --build
+vars:
+  APP: $NAME
+  PORT: "$PORT"
+  GOLANGCI: $GOLANGCI_IMAGE
+
+tasks:
+  run:
+    desc: Build and run locally
+    cmds:
+      - go build -o {{.APP}} ./cmd/{{.APP}}
+      - HTTP_ADDR=:{{.PORT}} ./{{.APP}}
+
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o {{.APP}} ./cmd/{{.APP}}
+
+  test:
+    desc: Run tests with the race detector
+    cmds:
+      - go test -race ./...
+
+  tidy:
+    desc: Tidy go.mod / go.sum
+    cmds:
+      - go mod tidy
+
+  lint:
+    desc: Lint via a pinned golangci-lint Docker image (same version for everyone)
+    cmds:
+      - docker run --rm -v "{{.TASKFILE_DIR}}:/app" -v golangci-lint-cache:/root/.cache -w /app {{.GOLANGCI}} golangci-lint run
+
+  dc:
+    desc: Build and start the stack with Docker Compose
+    cmds:
+      - docker compose up --build --remove-orphans
+EOF
+
+# --- .golangci.yml (shared config, golangci-lint v2 schema) -------------
+cat > ".golangci.yml" <<'EOF'
+version: "2"
 
 run:
-	go build -o $PROJECT_NAME ./cmd/$PROJECT_NAME && HTTP_ADDR=:$HTTP_PORT ./$PROJECT_NAME
+  timeout: 5m
 
-test:
-	go test -race ./...
-
-lint:
-	golangci-lint run
+linters:
+  default: standard
+  # Add extra linters here so everyone shares them, e.g.:
+  # enable:
+  #   - revive
+  #   - misspell
 EOF
 
-# Create simple Dockerfile
-cat <<EOF > "Dockerfile"
-# Start from a small, secure base image
-FROM golang:1.23-alpine AS builder
-
-# Set the working directory inside the container
-WORKDIR /app
-
-# Copy the Go module files
-COPY go.mod go.sum ./
-
-# Download the Go module dependencies
+# --- Dockerfile (alpine) ------------------------------------------------
+cat > "Dockerfile" <<EOF
+# syntax=docker/dockerfile:1
+FROM golang:$GO_MM-alpine AS builder
+WORKDIR /src
+COPY go.mod go.sum* ./
 RUN go mod download
-
-# Copy the source code into the container
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/$NAME
 
-# Build the Go binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app ./cmd/$PROJECT_NAME/main.go
-
-# Create a minimal production image
 FROM alpine:latest
-
-# It's essential to regularly update the packages within the image to include security patches
-RUN apk update && apk upgrade
-
-# Reduce image size
-RUN rm -rf /var/cache/apk/* && \
-    rm -rf /tmp/*
-
-# Avoid running code as a root user
-RUN adduser -D appuser
-USER appuser
-
-# Set the working directory inside the container
+RUN apk add --no-cache ca-certificates \\
+    && adduser -D -u 10001 app
+USER app
 WORKDIR /app
-
-# Copy only the necessary files from the builder stage
-COPY --from=builder /app/app .
-
-# Set any environment variables required by the application
-ENV HTTP_ADDR=:8080
-
-# Expose the port that the application listens on
-EXPOSE 8080
-
-# Run the binary when the container starts
+COPY --from=builder /out/app .
+ENV HTTP_ADDR=:$PORT
+EXPOSE $PORT
 CMD ["./app"]
 EOF
 
-# Create simple docker-compose.yml
-cat <<EOF > "docker-compose.yml"
-version: '3.8'
-
+# --- docker-compose.yml -------------------------------------------------
+cat > "docker-compose.yml" <<EOF
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
     ports:
-      - 8080:8080
+      - "$PORT:$PORT"
+    environment:
+      HTTP_ADDR: ":$PORT"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:$PORT/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 EOF
+
+# --- tidy + format ------------------------------------------------------
+go mod tidy
+gofmt -w .
+
+# --- ensure Task is available -------------------------------------------
+if ! command -v task >/dev/null 2>&1; then
+  echo "Task runner not found — installing via 'go install'..."
+  go install github.com/go-task/task/v3/cmd/task@latest
+  echo "Installed to \$(go env GOPATH)/bin (make sure it is on PATH)."
+fi
 
 cd ..
 
-echo "Project structure for $PROJECT_NAME has been successfully created."
-
+echo
+echo "Project '$NAME' ($TYPE, port $PORT) created."
+echo "Next:  cd $NAME && task run     # then curl http://localhost:$PORT/healthz"
+echo "Lint:  task lint                # runs $GOLANGCI_IMAGE in Docker"

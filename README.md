@@ -84,9 +84,20 @@ powershell -ExecutionPolicy Bypass -File Go\go-install.ps1 -Version 1.26.2   # p
 Scaffold a new Go project:
 
 ```sh
-./Go/create_go_project.sh myapp 8080       # name + port
+./Go/create_go_project.sh myapp clean 8080   # name, type, port (type/port prompted if omitted)
 ```
-On Windows: `Go\create-go-project.bat myapp`.
+```powershell
+powershell -ExecutionPolicy Bypass -File Go\create_go_project.ps1 myapp clean 8080
+```
 
-The scaffold reads the listen address from `HTTP_ADDR` (defaults to the port
-passed at generation), so `make run` and the container start without arguments.
+- **Type** picks the layout: `web` (monolith), `microservice` (API/transport),
+  `clean` (domain/usecase/adapter/infra), or `minimal`. Empty dirs get a
+  `.gitkeep` so they survive git.
+- Generates a working `net/http` server (`/healthz` + graceful shutdown),
+  reading the address from `HTTP_ADDR`, so `task run` and the container start
+  without arguments.
+- **Task** (Taskfile.yml) replaces Make — `task run|build|test|lint|tidy|dc`;
+  installed automatically via `go install` if missing.
+- **`task lint`** runs a pinned `golangci-lint` Docker image, so every machine
+  lints with the exact same version; shared config in `.golangci.yml`.
+- Dockerfile (alpine, non-root) + Compose with a `/healthz` healthcheck.
