@@ -67,7 +67,8 @@ VS Code extensions are managed by built-in Settings Sync, not tracked here.
 Install / update the toolchain:
 
 ```sh
-./Go/go-install.sh 1.26.2                  # Linux: install/update Go, wires GOROOT/GOPATH
+./Go/go-install.sh                         # Linux: install/update to latest (auto arch)
+./Go/go-install.sh 1.26.2 amd64            # or pin version + arch
 ```
 ```powershell
 # Windows: install/update to the latest release (auto-detects arch)

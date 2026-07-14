@@ -1,30 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Manual Go installer.
+# Manual Go installer / updater.
 #   GOROOT -> /opt/programming/go   (the toolchain itself, owned by $USER)
 #   GOPATH -> $HOME/go              (modules, binaries, caches)
+#
+# Usage: $0 [version] [arch]
+#   version  e.g. 1.26.2   (default: latest stable from go.dev)
+#   arch     386|amd64|armv6l|arm64   (default: detected from `uname -m`)
 #
 # Environment is written to ~/.config/profile.d/go.sh (POSIX) for sh/bash/zsh,
 # and to ~/.config/fish/conf.d/go.fish for fish. The script wires whichever
 # shells are installed so the paths reach console, GUI and login sessions.
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <go-version>   e.g. $0 1.26.2"
-  exit 1
+# --- resolve version (default: latest stable) ---------------------------
+VERSION="${1:-}"
+if [ -z "$VERSION" ]; then
+  echo "Resolving latest Go version..."
+  VERSION="$(curl -fsSL 'https://go.dev/VERSION?m=text' | head -n1)"
 fi
+VERSION="${VERSION#go}"   # normalize "go1.26.2" -> "1.26.2"
 
-VERSION="$1"
-
-# --- pick architecture --------------------------------------------------
-echo "Which architecture do you want to install?"
-select ARCH in "386" "amd64" "armv6l" "arm64"; do
-  if [[ -n "${ARCH:-}" ]]; then
-    echo "Selected: $ARCH"
-    break
-  fi
-  echo "Invalid choice, try again."
-done
+# --- resolve architecture (default: this machine) -----------------------
+ARCH="${2:-}"
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    x86_64 | amd64)   ARCH=amd64 ;;
+    aarch64 | arm64)  ARCH=arm64 ;;
+    armv6l)           ARCH=armv6l ;;
+    armv7l | armhf)   ARCH=armv6l ;;
+    i386 | i686)      ARCH=386 ;;
+    *) echo "Unknown arch '$(uname -m)'. Pass it explicitly: $0 <version> <arch>"; exit 1 ;;
+  esac
+fi
+echo "Installing Go $VERSION ($ARCH)"
 
 # --- paths --------------------------------------------------------------
 GO_HOME=/opt/programming     # parent dir for the toolchain
