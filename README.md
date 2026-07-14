@@ -26,6 +26,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Go/` | Go toolchain installer + project scaffolding scripts |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
+| `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
 
 ## Usage
 
@@ -46,6 +47,9 @@ ln -sf "$PWD/Editors/helix/config.toml" ~/.config/helix/config.toml
 
 # micro
 ln -sf "$PWD/Editors/micro/settings.json" ~/.config/micro/settings.json
+
+# tmux (Linux/macOS) — psmux on Windows reads the same file as ~/.tmux.conf
+ln -sf "$PWD/Tmux/tmux.conf" ~/.config/tmux/tmux.conf
 
 # IntelliJ IDEA VM options (OS-independent, version-independent)
 export IDEA_VM_OPTIONS="$PWD/IDE/IntelliJ-IDEA/idea64.vmoptions"   # add to your shell rc
