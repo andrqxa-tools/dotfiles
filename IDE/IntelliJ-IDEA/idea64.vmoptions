@@ -1,0 +1,27 @@
+# IntelliJ IDEA custom VM options — tuned for a 32 GB machine.
+#
+# OS-independent: instead of copying this into a version-specific JetBrains
+# config folder, point the IDE at this file with the IDEA_VM_OPTIONS env var:
+#   export IDEA_VM_OPTIONS=/path/to/dotfiles/IDE/IntelliJ-IDEA/idea64.vmoptions
+# (works on Linux/Windows/macOS and survives IDE upgrades). Alternatively:
+# Help > Edit Custom VM Options and paste the contents.
+#
+# Adjust -Xmx to taste: 8 GB heap is comfortable on 32 GB, leaving room for
+# Gradle/Maven daemons, containers and the browser.
+
+-Xms2048m
+-Xmx8192m
+-XX:ReservedCodeCacheSize=1024m
+-XX:+UseG1GC
+-XX:SoftRefLRUPolicyMSPerMB=50
+-XX:CICompilerCount=2
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:-OmitStackTraceInFastThrow
+-XX:+IgnoreUnrecognizedVMOptions
+-ea
+-Dfile.encoding=UTF-8
+-Dsun.io.useCanonCaches=false
+-Djdk.http.auth.tunneling.disabledSchemes=""
+-Djdk.attach.allowAttachSelf=true
+-Djdk.module.illegalAccess.silent=true
+-Dkotlinx.coroutines.debug=off

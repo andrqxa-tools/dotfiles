@@ -25,7 +25,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Fonts/` | JetBrainsMono Nerd Font installers (linux / termux / windows) |
 | `Go/` | Go toolchain installer + project scaffolding scripts |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
-| `IDE/Netbeans/` | NetBeans `.conf` |
+| `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning for a 32 GB machine |
 
 ## Usage
 
@@ -46,6 +46,9 @@ ln -sf "$PWD/Editors/helix/config.toml" ~/.config/helix/config.toml
 
 # micro
 ln -sf "$PWD/Editors/micro/settings.json" ~/.config/micro/settings.json
+
+# IntelliJ IDEA VM options (OS-independent, version-independent)
+export IDEA_VM_OPTIONS="$PWD/IDE/IntelliJ-IDEA/idea64.vmoptions"   # add to your shell rc
 ```
 
 VS Code extensions are managed by built-in Settings Sync, not tracked here.
