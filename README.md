@@ -25,7 +25,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Fonts/` | JetBrainsMono Nerd Font installers (linux / termux / windows) |
 | `Go/` | Go toolchain installer + project scaffolding scripts |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
-| `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning for a 32 GB machine |
+| `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
 
 ## Usage
 
