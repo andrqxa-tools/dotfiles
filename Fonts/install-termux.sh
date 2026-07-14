@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-set -e
+set -euo pipefail
 
 FONT="JetBrainsMono"
 DEST="$HOME/.termux"
@@ -10,7 +10,7 @@ cd "$TMP"
 
 echo "Downloading JetBrainsMono Nerd Font..."
 
-URL=$(curl -s https://api.github.com/repos/ryanoasis/nerd-fonts/releases \
+URL=$(curl -s https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest \
   | sed -n 's/.*"browser_download_url": "\(.*JetBrainsMono.tar.xz\)".*/\1/p' \
   | head -n1)
 

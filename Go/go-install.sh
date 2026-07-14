@@ -77,11 +77,14 @@ echo "Extraction complete"
 
 
 echo $SHELL_RC
+# Independent checks: GOROOT and GOPATH must each be added if missing.
 if [ -z "${GOROOT}" ]; then
   echo "export GOROOT=$GO_HOME/go" >> "$SHELL_RC"
   echo "export PATH=\$GOROOT/bin:\$PATH" >> "$SHELL_RC"
-elif [ -z "${GOPATH}" ]; then
-  echo "export GOPATH=$GO_PATH/go" >> "$SHELL_RC"
+fi
+
+if [ -z "${GOPATH}" ]; then
+  echo "export GOPATH=$GO_PATH" >> "$SHELL_RC"
   echo "export PATH=\$GOPATH/bin:\$PATH" >> "$SHELL_RC"
 fi
 

@@ -23,7 +23,6 @@ mkdir -p "$PROJECT_NAME/test"
 # Initialize a new Go module in the project directory
 cd "$PROJECT_NAME"
 go mod init "$PROJECT_NAME"
-touch go.sum
 
 # Create a simple main.go file
 cat <<EOF > "cmd/$PROJECT_NAME/main.go"
@@ -38,18 +37,18 @@ import (
 )
 
 func main() {
-
-    if len(os.Args) < 2 {
-        fmt.Println("Usage: go run main.go <port>")
-        os.Exit(1)
+    // Port is read from the environment so both \`make run\` and the
+    // container (CMD ["./app"]) start without positional arguments.
+    addr := os.Getenv("HTTP_ADDR")
+    if addr == "" {
+        addr = ":$HTTP_PORT"
     }
-    port := os.Args[1]
 
     if err := run(); err != nil {
         log.Fatal(err)
     }
 
-    fmt.Println("Hello, $PROJECT_NAME!, your port is ", port)
+    fmt.Println("Hello, $PROJECT_NAME! Listening on", addr)
 
     os.Exit(0)
 }
@@ -128,7 +127,6 @@ go.work
 *.orig
 
 # === Project specific ===
-*.json
 /tmp
 
 # NAME_OF_APPLICATION (from Makefile) - for avoiding linux executing files
@@ -147,7 +145,7 @@ dc:
 	docker-compose up --remove-orphans --build
 
 run:
-	go build -o $PROJECT_NAME cmd/$PROJECT_NAME/main.go ./$PROJECT_NAME $HTTP_PORT
+	go build -o $PROJECT_NAME ./cmd/$PROJECT_NAME && HTTP_ADDR=:$HTTP_PORT ./$PROJECT_NAME
 
 test:
 	go test -race ./...
@@ -159,7 +157,7 @@ EOF
 # Create simple Dockerfile
 cat <<EOF > "Dockerfile"
 # Start from a small, secure base image
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /app

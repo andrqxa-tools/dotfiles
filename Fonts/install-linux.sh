@@ -10,8 +10,8 @@ cd "$DEST"
 
 echo "Fetching latest release info..."
 
-URL=$(curl -s "https://api.github.com/repos/${REPO}/releases" \
-  | jq -r '.[0].assets[]
+URL=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" \
+  | jq -r '.assets[]
       | select(.name == "'"${FONT}"'.tar.xz")
       | .browser_download_url')
 
@@ -23,13 +23,12 @@ fi
 echo "Downloading $URL"
 curl -LO "$URL"
 
-tar xvf "${FONT}.tar.xz"
-pwd
-ls -la
-rm ${DEST}/JetBrainsMonoNerdFontMono*
-rm ${DEST}/JetBrainsMonoNerdFontPropo*
-rm ${DEST}/JetBrainsMonoNLNerdFont*
-rm ${FONT}.tar.xz
+tar xf "${FONT}.tar.xz"
+# Keep only the standard variant; drop Mono/Propo/NL.
+rm -f "${DEST}"/JetBrainsMonoNerdFontMono* \
+      "${DEST}"/JetBrainsMonoNerdFontPropo* \
+      "${DEST}"/JetBrainsMonoNLNerdFont*
+rm -f "${FONT}.tar.xz"
 
 fc-cache -fv
 

@@ -9,8 +9,8 @@ New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Set-Location $Dest
 
 Write-Host "Fetching latest release info..."
-$Release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases"
-$Asset = $Release[0].assets | Where-Object { $_.name -eq $Archive }
+$Release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest"
+$Asset = $Release.assets | Where-Object { $_.name -eq $Archive }
 
 if (-not $Asset) { throw "$Archive not found in latest release" }
 

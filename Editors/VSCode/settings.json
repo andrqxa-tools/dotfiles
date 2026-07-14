@@ -103,8 +103,7 @@
       "unusedparams": true,
       "shadow": true,
       "nilness": true,
-      "unusedwrite": true,
-      "fieldalignment": true
+      "unusedwrite": true
     },
     "hints": {
       "assignVariableTypes": true,
@@ -204,7 +203,10 @@
 
   "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
   "terminal.integrated.fontSize": 14,
-  "terminal.integrated.shell.linux": "/bin/bash",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": { "path": "/bin/bash" }
+  },
 
   // =====================================================
   // ===================== AI =============================

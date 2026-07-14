@@ -120,7 +120,6 @@ echo # Git merge
 echo *.orig
 echo.
 echo # === Project specific ===
-echo *.json
 echo /tmp
 echo.
 echo # NAME_OF_APPLICATION (from Makefile) - for avoiding linux executing files
@@ -139,7 +138,7 @@ echo dc:
 echo 	docker-compose up --remove-orphans --build
 echo.
 echo run:
-echo 	go build -o $PROJECT_NAME cmd/$PROJECT_NAME/main.go && HTTP_ADDR=:8080 ./$PROJECT_NAME
+echo 	go build -o %PROJECT_NAME% ./cmd/%PROJECT_NAME% && HTTP_ADDR=:8080 ./%PROJECT_NAME%
 echo.
 echo test:
 echo 	go test -race ./...
@@ -152,7 +151,7 @@ echo.
 :: Create simple Dockerfile
 (
 echo # Start from a small, secure base image
-echo FROM golang:1.22-alpine AS builder
+echo FROM golang:1.23-alpine AS builder
 echo.
 echo # Set the working directory inside the container
 echo WORKDIR /app
