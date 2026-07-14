@@ -1,0 +1,28 @@
+require "nvchad.mappings"
+
+local map = vim.keymap.set
+
+map("n", ";", ":", { desc = "CMD enter command mode" })
+map("i", "jk", "<ESC>")
+
+-- vim-tmux-navigator: seamless C-h/j/k/l between nvim splits and tmux/psmux
+-- panes. Set here (after nvchad.mappings, which runs last) so these win over
+-- NvChad's default window-nav on the same keys. The plugin's own mappings are
+-- disabled via g:tmux_navigator_no_mappings in plugins/init.lua.
+map("n", "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { desc = "window/tmux left" })
+map("n", "<C-j>", "<cmd>TmuxNavigateDown<CR>", { desc = "window/tmux down" })
+map("n", "<C-k>", "<cmd>TmuxNavigateUp<CR>", { desc = "window/tmux up" })
+map("n", "<C-l>", "<cmd>TmuxNavigateRight<CR>", { desc = "window/tmux right" })
+
+-- Go debugging (nvim-dap / nvim-dap-go)
+map("n", "<leader>db", function() require("dap").toggle_breakpoint() end, { desc = "DAP toggle breakpoint" })
+map("n", "<leader>dc", function() require("dap").continue() end, { desc = "DAP continue" })
+map("n", "<leader>do", function() require("dap").step_over() end, { desc = "DAP step over" })
+map("n", "<leader>di", function() require("dap").step_into() end, { desc = "DAP step into" })
+map("n", "<leader>dgt", function() require("dap-go").debug_test() end, { desc = "DAP debug Go test" })
+map("n", "<leader>dgl", function() require("dap-go").debug_last() end, { desc = "DAP debug last Go test" })
+
+-- Gopher (struct tags / if-err / impl)
+map("n", "<leader>gsj", "<cmd>GoTagAdd json<CR>", { desc = "Gopher add json tags" })
+map("n", "<leader>gsy", "<cmd>GoTagAdd yaml<CR>", { desc = "Gopher add yaml tags" })
+map("n", "<leader>gie", "<cmd>GoIfErr<CR>", { desc = "Gopher if err" })

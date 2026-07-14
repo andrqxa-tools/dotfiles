@@ -17,7 +17,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | Path | What's inside |
 |------|---------------|
 | `Editors/VSCode/` | `settings.json` (extensions are handled by VS Code Settings Sync) |
-| `Editors/NeoVim/NvChad/custom/` | NvChad `custom/` overrides (LSP, DAP, gopher, none-ls) |
+| `Editors/NeoVim/NvChad/` | NvChad 2.5 config — Go (gopls/conform/dap/gopher) + tmux/AI tweaks |
 | `Editors/Emacs/.emacs.d/` | `init.el` with `ide`/`lean` profiles + `lisp/go-config.el` |
 | `Editors/helix/` | `config.toml` |
 | `Editors/micro/` | `settings.json`, `bindings.json`, `colorschemes/` |
@@ -36,8 +36,11 @@ Symlink or copy the configs to their real locations. Common targets:
 # VS Code (Linux)
 ln -sf "$PWD/Editors/VSCode/settings.json" ~/.config/Code/User/settings.json
 
-# NvChad custom overrides
-ln -sf "$PWD/Editors/NeoVim/NvChad/custom" ~/.config/nvim/lua/custom
+# NvChad 2.5: bootstrap the starter first, then point config at this repo
+#   git clone https://github.com/NvChad/starter ~/.config/nvim && rm -rf ~/.config/nvim/.git
+ln -sfn "$PWD/Editors/NeoVim/NvChad/lua"          ~/.config/nvim/lua
+ln -sf  "$PWD/Editors/NeoVim/NvChad/init.lua"     ~/.config/nvim/init.lua
+ln -sf  "$PWD/Editors/NeoVim/NvChad/.stylua.toml" ~/.config/nvim/.stylua.toml
 
 # Emacs
 ln -sf "$PWD/Editors/Emacs/.emacs.d/init.el" ~/.emacs.d/init.el
