@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ============================================================
+# wl-copy-both — read stdin ONCE, put it into BOTH Wayland
+# selections: CLIPBOARD (Ctrl-V / Ctrl-Shift-V) and PRIMARY
+# (middle-click / Shift-Insert). One "true" source, so copying
+# from tmux/nvim lands wherever you paste from.
+#
+# Sequential (not `tee >(...)`): bash does not wait on process
+# substitution, which raced the two wl-copy daemons and left one
+# selection lagging a copy behind. Reading into a var and feeding
+# each selection in turn is deterministic. Trailing newlines are
+# dropped by $(...) — desirable for clipboard (no stray newline
+# that would auto-run a pasted shell command).
+#
+# Linux/Wayland only. On this box it is the single copy path
+# for tmux (copy-mode y/Enter/mouse + tmux-yank) — see
+# ../tmux.conf. Requires wl-clipboard.
+# ============================================================
+data=$(cat)
+printf '%s' "$data" | wl-copy
+printf '%s' "$data" | wl-copy --primary
