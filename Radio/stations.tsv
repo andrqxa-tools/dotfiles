@@ -1,0 +1,63 @@
+# Формат: жанр<TAB>название<TAB>прямой URL потока
+Українське	Наше Радіо — HD	https://online.nasheradio.ua/NasheRadio_HD
+Українське	KISS FM Ukrainian — HD	https://online.kissfm.ua/KissFM_Ukr_HD
+Українське	Radio ROKS Український Рок — HD	https://online.radioroks.ua/RadioROKS_Ukr_HD
+Українське	Українське Радіо	http://radio.ukr.radio:8000/ur1-mp3
+Українське	Радіо Культура	http://radio.ukr.radio:8000/ur3-mp3
+
+Рок	Radio ROKS — HD	https://online.radioroks.ua/RadioROKS_HD
+Рок	Radio ROKS Classic Rock — HD	https://online.radioroks.ua/RadioROKS_ClassicRock_HD
+Рок	Radio ROKS Новий Рок — HD	https://online.radioroks.ua/RadioROKS_NewRock_HD
+Рок	Radio Paradise Rock	https://stream.radioparadise.com/rock-192
+
+Метал	Radio ROKS Hard'n'Heavy — HD	https://online.radioroks.ua/RadioROKS_HardnHeavy_HD
+Метал	SomaFM Metal Detector	https://ice1.somafm.com/metal-128-mp3
+Метал	FIP Metal	https://icecast.radiofrance.fr/fipmetal-midfi.mp3
+
+Джаз	Radio Jazz — HD	https://online.radiojazz.ua/RadioJazz_HD
+Джаз	Radio Jazz Groove — HD	https://online.radiojazz.ua/RadioJazz_Groove_HD
+Джаз	SomaFM Sonic Universe	https://ice1.somafm.com/sonicuniverse-128-mp3
+Джаз	FIP Jazz	https://icecast.radiofrance.fr/fipjazz-midfi.mp3
+
+Классика	Classical KING FM	https://classicalking.streamguys1.com/king-fm-mp3
+Классика	WFMT Chicago	https://wfmt.streamguys1.com/main-mp3
+Классика	Radio Swiss Classic	https://stream.srg-ssr.ch/m/rsc_de/mp3_128
+Классика	Venice Classic Radio	https://uk2.streamingpulse.com/ssl/vcr1
+Классика	Classical KUSC	https://playerservices.streamtheworld.com/api/livestream-redirect/KUSCMP128.mp3
+
+Электроника	KISS FM Ukraine — HD	https://online.kissfm.ua/KissFM_HD
+Электроника	KISS FM Deep	https://online.kissfm.ua/KissFM_Deep
+Электроника	KISS FM Digital — HD	https://online.kissfm.ua/KissFM_Digital_HD
+Электроника	SomaFM DEF CON Radio	https://ice1.somafm.com/defcon-128-mp3
+Электроника	SomaFM The Trip	https://ice1.somafm.com/thetrip-128-mp3
+
+Ambient / Chill	Radio Relax	https://online.radiorelax.ua/RadioRelax
+Ambient / Chill	Lounge FM Chill Out	https://cast.mediaonline.net.ua/chillout320
+Ambient / Chill	SomaFM Groove Salad	https://ice1.somafm.com/groovesalad-128-mp3
+Ambient / Chill	SomaFM Drone Zone	https://ice1.somafm.com/dronezone-128-mp3
+Ambient / Chill	SomaFM Deep Space One	https://ice1.somafm.com/deepspaceone-128-mp3
+
+Инди / Альтернатива	SomaFM Indie Pop Rocks!	https://ice1.somafm.com/indiepop-128-mp3
+Инди / Альтернатива	SomaFM Digitalis	https://ice1.somafm.com/digitalis-128-mp3
+Инди / Альтернатива	Radio Paradise Main Mix	https://stream.radioparadise.com/mp3-192
+Инди / Альтернатива	FIP Rock	https://icecast.radiofrance.fr/fiprock-midfi.mp3
+
+Soul / Funk / Hip-Hop	SomaFM Fluid	https://ice1.somafm.com/fluid-128-mp3
+Soul / Funk / Hip-Hop	SomaFM Seven Inch Soul	https://ice1.somafm.com/7soul-128-mp3
+Soul / Funk / Hip-Hop	FIP Groove	https://icecast.radiofrance.fr/fipgroove-midfi.mp3
+Soul / Funk / Hip-Hop	FIP Hip-Hop	https://icecast.radiofrance.fr/fiphiphop-midfi.mp3
+
+Reggae / World	SomaFM Heavyweight Reggae	https://ice1.somafm.com/reggae-128-mp3
+Reggae / World	SomaFM Suburbs of Goa	https://ice1.somafm.com/suburbsofgoa-128-mp3
+Reggae / World	FIP Reggae	https://icecast.radiofrance.fr/fipreggae-midfi.mp3
+Reggae / World	FIP World	https://icecast.radiofrance.fr/fipworld-midfi.mp3
+Reggae / World	Radio Paradise World/Etc	https://stream.radioparadise.com/world-etc-192
+
+Ретро / 70-е / 80-е	SomaFM Underground 80s	https://ice1.somafm.com/u80s-128-mp3
+Ретро / 70-е / 80-е	SomaFM Left Coast 70s	https://ice1.somafm.com/seventies-128-mp3
+Ретро / 70-е / 80-е	Мелодія FM	https://online.melodiafm.ua/MelodiaFM
+Ретро / 70-е / 80-е	Radio Gold Ukraine	https://online.radioplayer.ua/RadioGold
+
+Новости / Разговорное	Українське Радіо	http://radio.ukr.radio:8000/ur1-mp3
+Новости / Разговорное	Радіо Київ 98 FM	https://cdn.vsnw.net:8943/kyiv_fm_128k
+Новости / Разговорное	Radio Ukraine International	http://radio.ukr.radio:8000/ur4-mp3

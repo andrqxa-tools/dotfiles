@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+radio_dir="${RADIO_CONFIG_DIR:-$config_home/radio}"
+stations_file="${RADIO_STATIONS_FILE:-$radio_dir/stations.tsv}"
+mpv_options_file="${RADIO_MPV_CONFIG:-$radio_dir/mpv.conf}"
+
+die() {
+    printf 'radio: %s\n' "$*" >&2
+    exit 1
+}
+
+require_setup() {
+    command -v mpv >/dev/null 2>&1 || die 'mpv не найден в PATH'
+    [[ -r "$stations_file" ]] || die "не найден каталог станций: $stations_file"
+    [[ -r "$mpv_options_file" ]] || die "не найден конфиг mpv: $mpv_options_file"
+}
+
+usage() {
+    cat <<'EOF'
+Консольное интернет-радио на базе mpv.
+
+Использование:
+  radio                     выбрать жанр и станцию
+  radio <жанр>              выбрать станцию указанного жанра
+  radio all                 выбрать среди всех станций
+  radio random [жанр]       включить случайную станцию
+  radio list [жанр]         показать каталог
+  radio genres              показать жанры
+  radio m3u [файл]          экспортировать каталог в M3U
+  radio edit                открыть каталог в $EDITOR
+  radio help                показать эту справку
+
+Примеры:
+  radio rock
+  radio jazz
+  radio chill
+  radio random metal
+  radio list Українське
+
+Во время воспроизведения:
+  9 / 0     тише / громче
+  m         выключить или включить звук
+  q         остановить и выйти
+EOF
+}
+
+# Read valid records only. Format: genre<TAB>name<TAB>url
+records() {
+    awk -F '\t' '
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        NF >= 3 { print $1 "\t" $2 "\t" $3 }
+    ' "$stations_file"
+}
+
+pick_line() {
+    local prompt="$1"
+    local fields="${2:-1..}"
+    local query="${3:-}"
+    local -a lines labels
+    local line selected
+    local i
+
+    if command -v fzf >/dev/null 2>&1; then
+        fzf \
+            --delimiter=$'\t' \
+            --with-nth="$fields" \
+            --height=80% \
+            --layout=reverse \
+            --border \
+            --cycle \
+            --prompt="$prompt " \
+            ${query:+--query="$query"}
+        return
+    fi
+
+    mapfile -t lines
+    ((${#lines[@]})) || return 1
+    for line in "${lines[@]}"; do
+        labels+=("${line//$'\t'/ — }")
+    done
+
+    printf 'Выберите пункт и нажмите Enter:\n' >/dev/tty
+    PS3="$prompt "
+    select selected in "${labels[@]}"; do
+        if [[ "$REPLY" =~ ^[0-9]+$ ]] && ((REPLY >= 1 && REPLY <= ${#lines[@]})); then
+            i=$((REPLY - 1))
+            printf '%s\n' "${lines[$i]}"
+            return 0
+        fi
+        printf 'Неверный номер.\n' >/dev/tty
+    done </dev/tty
+}
+
+genres() {
+    records | awk -F '\t' '!seen[$1]++ { order[++n]=$1; count[$1]++ ; next }
+        { count[$1]++ }
+        END { for (i=1; i<=n; i++) print order[i] "\t" count[order[i]] }'
+}
+
+resolve_genre() {
+    local requested="${1:-}"
+    local alias
+
+    case "${requested,,}" in
+        ua|ukraine|ukrainian|украина|українське) alias='Українське' ;;
+        rock|рок) alias='Рок' ;;
+        metal|метал) alias='Метал' ;;
+        jazz|джаз) alias='Джаз' ;;
+        classical|classic|классика) alias='Классика' ;;
+        electronic|electronica|electro|edm|электроника) alias='Электроника' ;;
+        ambient|chill|chillout|эмбиент) alias='Ambient / Chill' ;;
+        indie|alternative|инди|альтернатива) alias='Инди / Альтернатива' ;;
+        soul|funk|hip-hop|hiphop|соул|фанк) alias='Soul / Funk / Hip-Hop' ;;
+        reggae|world|регги) alias='Reggae / World' ;;
+        retro|oldies|70s|80s|ретро) alias='Ретро / 70-е / 80-е' ;;
+        news|talk|новости) alias='Новости / Разговорное' ;;
+        *) alias="$requested" ;;
+    esac
+
+    genres | awk -F '\t' -v wanted="$alias" '
+        tolower($1) == tolower(wanted) { print $1; exit }
+    '
+}
+
+choose_genre() {
+    local selected
+    selected="$(genres | pick_line 'Жанр>' '1,2')" || return 1
+    printf '%s\n' "${selected%%$'\t'*}"
+}
+
+stations_in_genre() {
+    local genre="$1"
+    records | awk -F '\t' -v wanted="$genre" '$1 == wanted { print $2 "\t" $3 }'
+}
+
+play_record() {
+    local genre="$1"
+    local station="$2"
+    local url="$3"
+
+    printf '\n▶ %s\n  %s\n  %s\n\n' "$station" "$genre" "$url"
+    exec mpv --include="$mpv_options_file" "$url"
+}
+
+choose_and_play_genre() {
+    local genre="$1"
+    local selected station url
+
+    selected="$(stations_in_genre "$genre" | pick_line 'Станция>' '1')" || exit 0
+    station="${selected%%$'\t'*}"
+    url="${selected#*$'\t'}"
+    play_record "$genre" "$station" "$url"
+}
+
+choose_and_play_all() {
+    local selected genre rest station url
+
+    selected="$(records | pick_line 'Станция>' '1,2')" || exit 0
+    genre="${selected%%$'\t'*}"
+    rest="${selected#*$'\t'}"
+    station="${rest%%$'\t'*}"
+    url="${rest#*$'\t'}"
+    play_record "$genre" "$station" "$url"
+}
+
+play_random() {
+    local requested="${1:-}"
+    local genre selected rest station url
+
+    if [[ -n "$requested" ]]; then
+        genre="$(resolve_genre "$requested")"
+        [[ -n "$genre" ]] || die "неизвестный жанр: $requested"
+        selected="$(stations_in_genre "$genre" | shuf -n 1)"
+        station="${selected%%$'\t'*}"
+        url="${selected#*$'\t'}"
+    else
+        selected="$(records | shuf -n 1)"
+        genre="${selected%%$'\t'*}"
+        rest="${selected#*$'\t'}"
+        station="${rest%%$'\t'*}"
+        url="${rest#*$'\t'}"
+    fi
+    play_record "$genre" "$station" "$url"
+}
+
+list_stations() {
+    local requested="${1:-}"
+    local genre=''
+    local data
+
+    if [[ -n "$requested" ]]; then
+        genre="$(resolve_genre "$requested")"
+        [[ -n "$genre" ]] || die "неизвестный жанр: $requested"
+        data="$(records | awk -F '\t' -v wanted="$genre" '$1 == wanted { print $1 "\t" $2 "\t" $3 }')"
+    else
+        data="$(records)"
+    fi
+
+    if command -v column >/dev/null 2>&1; then
+        { printf 'ЖАНР\tСТАНЦИЯ\tПОТОК\n'; printf '%s\n' "$data"; } | column -t -s $'\t'
+    else
+        printf '%-25s  %s\n' 'ЖАНР' 'СТАНЦИЯ'
+        printf '%s\n' "$data" | awk -F '\t' '{ printf "%-25s  %s\n", $1, $2 }'
+    fi
+}
+
+export_m3u() {
+    local output="${1:-$radio_dir/radio.m3u}"
+    local tmp="${output}.tmp.$$"
+
+    mkdir -p "$(dirname "$output")"
+    {
+        printf '#EXTM3U\n'
+        records | while IFS=$'\t' read -r genre station url; do
+            printf '#EXTINF:-1 group-title="%s",%s\n%s\n' "$genre" "$station" "$url"
+        done
+    } >"$tmp"
+    mv -f "$tmp" "$output"
+    printf 'Создан плейлист: %s\n' "$output"
+}
+
+main() {
+    local command="${1:-}"
+    local genre
+
+    require_setup
+
+    case "$command" in
+        '' )
+            genre="$(choose_genre)" || exit 0
+            choose_and_play_genre "$genre"
+            ;;
+        all|--all|-a)
+            choose_and_play_all
+            ;;
+        random|--random)
+            shift
+            play_random "${*:-}"
+            ;;
+        list|--list|-l)
+            shift
+            list_stations "${*:-}"
+            ;;
+        genres|--genres|-g)
+            genres | awk -F '\t' '{ printf "%-25s %2d станц.\n", $1, $2 }'
+            ;;
+        m3u|playlist|--m3u)
+            shift
+            export_m3u "${1:-}"
+            ;;
+        edit|--edit|-e)
+            exec "${EDITOR:-nano}" "$stations_file"
+            ;;
+        help|--help|-h)
+            usage
+            ;;
+        *)
+            genre="$(resolve_genre "$*")"
+            [[ -n "$genre" ]] || die "неизвестный жанр: $* (см. radio genres)"
+            choose_and_play_genre "$genre"
+            ;;
+    esac
+}
+
+main "$@"
