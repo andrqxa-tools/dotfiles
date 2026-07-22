@@ -27,6 +27,16 @@ if stdlib and stdlib ~= "" then
   vim.list_extend(cmd, { "-v", stdlib .. ":/libsrc:ro" })
   init.stdlibSrc = stdlib
 end
+
+-- optional: the project's prebuilt symbol directory (its build output), e.g.
+--   export A2_SYMS=$HOME/Projects/A2/a2oberon/target/Linux64/bin
+-- imports then resolve from real build artifacts instead of fragile on-demand
+-- compilation (and modules whose source is in a prefixed file resolve too).
+local syms = vim.env.A2_SYMS
+if syms and syms ~= "" then
+  vim.list_extend(cmd, { "-v", syms .. ":/psym:ro" })
+end
+
 vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
 
 vim.lsp.start({
