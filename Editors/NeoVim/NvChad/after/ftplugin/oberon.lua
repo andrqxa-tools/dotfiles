@@ -45,3 +45,13 @@ vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
 -- (also <C-]> via nvim's built-in LSP tagfunc)
 -- Ctrl-Click: move the cursor to the click position, then go to definition
 vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition()<CR>", o)
+
+-- gO: module outline (document symbols). Telescope picker if available, else loclist.
+vim.keymap.set("n", "gO", function()
+  local ok, tb = pcall(require, "telescope.builtin")
+  if ok and tb.lsp_document_symbols then
+    tb.lsp_document_symbols()
+  else
+    vim.lsp.buf.document_symbol()
+  end
+end, { buffer = true, silent = true, desc = "Oberon: outline (document symbols)" })
