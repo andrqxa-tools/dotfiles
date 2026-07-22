@@ -99,6 +99,14 @@ return {
     end,
   },
 
+  -- ── Full-repo diff browser: clickable changed-files tree +
+  --    side-by-side diffs (GUI-style view of what claude/codex edited) ─
+  {
+    "sindrets/diffview.nvim",
+    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFileHistory" },
+    opts = {},
+  },
+
   -- ── Seamless nvim <-> tmux/psmux pane navigation ──────────────────
   {
     "christoomey/vim-tmux-navigator",

@@ -36,6 +36,16 @@ map("n", "<leader>ih", function()
 end, { desc = "LSP toggle inlay hints" })
 map("n", "<leader>cl", vim.lsp.codelens.run, { desc = "LSP run codelens" })
 
+-- Diffview (clickable changed-files tree, side-by-side diffs)
+map("n", "<leader>gd", function()
+  if require("diffview.lib").get_current_view() then
+    vim.cmd "DiffviewClose"
+  else
+    vim.cmd "DiffviewOpen"
+  end
+end, { desc = "Diffview toggle (working tree vs HEAD)" })
+map("n", "<leader>gf", "<cmd>DiffviewFileHistory %<CR>", { desc = "Diffview current file history" })
+
 -- Gopher (struct tags / if-err / impl)
 map("n", "<leader>gsj", "<cmd>GoTagAdd json<CR>", { desc = "Gopher add json tags" })
 map("n", "<leader>gsy", "<cmd>GoTagAdd yaml<CR>", { desc = "Gopher add yaml tags" })
