@@ -24,6 +24,6 @@ vim.lsp.start({
 local o = { buffer = true, silent = true }
 vim.keymap.set("n", "K",  vim.lsp.buf.hover, o)       -- hover: type + doc
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
-vim.keymap.set("n", "<C-k>", vim.lsp.buf.definition, o)  -- Ctrl-K: go to definition
+-- (also <C-]> via nvim's built-in LSP tagfunc)
 -- Ctrl-Click: move the cursor to the click position, then go to definition
 vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition()<CR>", o)
