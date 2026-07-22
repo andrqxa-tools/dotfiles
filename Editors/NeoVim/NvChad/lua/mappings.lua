@@ -21,6 +21,20 @@ map("n", "<leader>do", function() require("dap").step_over() end, { desc = "DAP 
 map("n", "<leader>di", function() require("dap").step_into() end, { desc = "DAP step into" })
 map("n", "<leader>dgt", function() require("dap-go").debug_test() end, { desc = "DAP debug Go test" })
 map("n", "<leader>dgl", function() require("dap-go").debug_last() end, { desc = "DAP debug last Go test" })
+map("n", "<leader>du", function() require("dapui").toggle() end, { desc = "DAP toggle UI" })
+
+-- Neotest (in-buffer test running via gotestsum)
+map("n", "<leader>tt", function() require("neotest").run.run() end, { desc = "Neotest run nearest" })
+map("n", "<leader>tf", function() require("neotest").run.run(vim.fn.expand "%") end, { desc = "Neotest run file" })
+map("n", "<leader>td", function() require("neotest").run.run { strategy = "dap" } end, { desc = "Neotest debug nearest" })
+map("n", "<leader>ts", function() require("neotest").summary.toggle() end, { desc = "Neotest summary" })
+map("n", "<leader>to", function() require("neotest").output.open { enter = true } end, { desc = "Neotest output" })
+
+-- LSP extras (gopls: inlay hints are enabled on attach in configs/lspconfig.lua)
+map("n", "<leader>ih", function()
+  vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = 0 }, { bufnr = 0 })
+end, { desc = "LSP toggle inlay hints" })
+map("n", "<leader>cl", vim.lsp.codelens.run, { desc = "LSP run codelens" })
 
 -- Gopher (struct tags / if-err / impl)
 map("n", "<leader>gsj", "<cmd>GoTagAdd json<CR>", { desc = "Gopher add json tags" })
