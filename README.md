@@ -27,6 +27,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
+| `Radio/` | Console internet radio for mpv with a genre-based station catalog |
 
 ## Usage
 
@@ -71,6 +72,18 @@ VS Code extensions are managed by built-in Settings Sync, not tracked here.
 ```powershell
 .\Fonts\install-windows.ps1   # Windows (per-user font dir)
 ```
+
+### Radio (mpv)
+
+Install `mpv`, `fzf` and the console radio command on Linux:
+
+```sh
+./Radio/install-linux.sh
+radio
+```
+
+The installer supports apt, dnf, pacman and zypper. It deploys only user files
+under `~/.local/bin` and `~/.config/radio`; the global mpv config is untouched.
 
 ### Go
 
