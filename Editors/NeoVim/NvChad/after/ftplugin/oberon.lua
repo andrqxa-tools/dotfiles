@@ -55,3 +55,14 @@ vim.keymap.set("n", "g0", function()
     vim.lsp.buf.document_symbol()
   end
 end, { buffer = true, silent = true, desc = "Oberon: outline (document symbols)" })  -- g0
+
+-- gr: find references (Telescope picker if available, else quickfix). Project-wide
+-- for module-level symbols — can take a few seconds on a large tree.
+vim.keymap.set("n", "gr", function()
+  local ok, tb = pcall(require, "telescope.builtin")
+  if ok and tb.lsp_references then
+    tb.lsp_references()
+  else
+    vim.lsp.buf.references()
+  end
+end, { buffer = true, silent = true, desc = "Oberon: find references" })
