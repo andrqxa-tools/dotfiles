@@ -76,6 +76,4 @@ vim.keymap.set("n", "gr", function()
     vim.lsp.buf.references()
   end
 end, { buffer = true, silent = true, desc = "Oberon: find references" })
-
--- <leader>ra: rename the module-level symbol under the cursor (project-wide)
-vim.keymap.set("n", "<leader>ra", vim.lsp.buf.rename, { buffer = true, silent = true, desc = "Oberon: rename" })
+-- rename is NVChad's existing <leader>ra (vim.lsp.buf.rename) — attaches to our client too
