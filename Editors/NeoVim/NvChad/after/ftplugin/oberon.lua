@@ -50,7 +50,7 @@ vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition
 vim.keymap.set("n", "g0", function()
   local ok, tb = pcall(require, "telescope.builtin")
   if ok and tb.lsp_document_symbols then
-    tb.lsp_document_symbols({ initial_mode = "normal" })  -- open in normal mode (j/k), not insert
+    tb.lsp_document_symbols()  -- opens in insert (type to filter); Esc for j/k navigation
   else
     vim.lsp.buf.document_symbol()
   end
