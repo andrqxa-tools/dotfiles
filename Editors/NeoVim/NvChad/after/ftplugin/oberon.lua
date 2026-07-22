@@ -10,12 +10,30 @@ vim.diagnostic.config({ virtual_lines = { current_line = true } })
 --     updates after you pause typing instead of flickering. Drop "--live" (and
 --     the flags line) to go back to on-open/on-save only.
 local dir = vim.fs.dirname(vim.api.nvim_buf_get_name(0)) or vim.fn.getcwd()
+
+-- mount the file's directory at /work so the server can resolve (and build on demand)
+-- the project's own modules, not just the standard library. Go-to-definition then
+-- jumps within the file and into sibling project modules.
+local cmd = { "docker", "run", "--rm", "-i", "-v", dir .. ":/work:ro" }
+local init = {}
+
+-- optional: point A2_STDLIB_SRC at a full A2 source tree, e.g.
+--   export A2_STDLIB_SRC=$HOME/Projects/A2/a2oberon/source
+-- so go-to-definition also reaches standard-library modules that aren't in the
+-- current project. (When you're editing inside that tree already, every module is a
+-- sibling in /work, so stdlib jumps work without this.)
+local stdlib = vim.env.A2_STDLIB_SRC
+if stdlib and stdlib ~= "" then
+  vim.list_extend(cmd, { "-v", stdlib .. ":/libsrc:ro" })
+  init.stdlibSrc = stdlib
+end
+vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
+
 vim.lsp.start({
   name = "ob",
-  -- mount the file's directory at /work so the server can resolve (and build on
-  -- demand) the project's own modules, not just the standard library
-  cmd = { "docker", "run", "--rm", "-i", "-v", dir .. ":/work:ro", "minia2-sdk", "lsp", "--live" },
+  cmd = cmd,
   root_dir = dir,
+  init_options = init,
   flags = { debounce_text_changes = 500 },
 })
 
