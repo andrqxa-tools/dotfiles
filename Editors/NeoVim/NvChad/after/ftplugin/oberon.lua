@@ -10,12 +10,40 @@ vim.diagnostic.config({ virtual_lines = { current_line = true } })
 --     updates after you pause typing instead of flickering. Drop "--live" (and
 --     the flags line) to go back to on-open/on-save only.
 local dir = vim.fs.dirname(vim.api.nvim_buf_get_name(0)) or vim.fn.getcwd()
+
+-- mount the file's directory at /work so the server can resolve (and build on demand)
+-- the project's own modules, not just the standard library. Go-to-definition then
+-- jumps within the file and into sibling project modules.
+local cmd = { "docker", "run", "--rm", "-i", "-v", dir .. ":/work:ro" }
+local init = {}
+
+-- optional: point A2_STDLIB_SRC at a full A2 source tree, e.g.
+--   export A2_STDLIB_SRC=$HOME/Projects/A2/a2oberon/source
+-- so go-to-definition also reaches standard-library modules that aren't in the
+-- current project. (When you're editing inside that tree already, every module is a
+-- sibling in /work, so stdlib jumps work without this.)
+local stdlib = vim.env.A2_STDLIB_SRC
+if stdlib and stdlib ~= "" then
+  vim.list_extend(cmd, { "-v", stdlib .. ":/libsrc:ro" })
+  init.stdlibSrc = stdlib
+end
+
+-- optional: the project's prebuilt symbol directory (its build output), e.g.
+--   export A2_SYMS=$HOME/Projects/A2/a2oberon/target/Linux64/bin
+-- imports then resolve from real build artifacts instead of fragile on-demand
+-- compilation (and modules whose source is in a prefixed file resolve too).
+local syms = vim.env.A2_SYMS
+if syms and syms ~= "" then
+  vim.list_extend(cmd, { "-v", syms .. ":/psym:ro" })
+end
+
+vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
+
 vim.lsp.start({
   name = "ob",
-  -- mount the file's directory at /work so the server can resolve (and build on
-  -- demand) the project's own modules, not just the standard library
-  cmd = { "docker", "run", "--rm", "-i", "-v", dir .. ":/work:ro", "minia2-sdk", "lsp", "--live" },
+  cmd = cmd,
   root_dir = dir,
+  init_options = init,
   flags = { debounce_text_changes = 500 },
 })
 
@@ -24,6 +52,28 @@ vim.lsp.start({
 local o = { buffer = true, silent = true }
 vim.keymap.set("n", "K",  vim.lsp.buf.hover, o)       -- hover: type + doc
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
-vim.keymap.set("n", "<C-k>", vim.lsp.buf.definition, o)  -- Ctrl-K: go to definition
+-- (also <C-]> via nvim's built-in LSP tagfunc)
 -- Ctrl-Click: move the cursor to the click position, then go to definition
 vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition()<CR>", o)
+
+-- g0: module outline (document symbols). Telescope picker if available, else loclist.
+vim.keymap.set("n", "g0", function()
+  local ok, tb = pcall(require, "telescope.builtin")
+  if ok and tb.lsp_document_symbols then
+    tb.lsp_document_symbols()  -- opens in insert (type to filter); Esc for j/k navigation
+  else
+    vim.lsp.buf.document_symbol()
+  end
+end, { buffer = true, silent = true, desc = "Oberon: outline (document symbols)" })  -- g0
+
+-- gr: find references (Telescope picker if available, else quickfix). Project-wide
+-- for module-level symbols — can take a few seconds on a large tree.
+vim.keymap.set("n", "gr", function()
+  local ok, tb = pcall(require, "telescope.builtin")
+  if ok and tb.lsp_references then
+    tb.lsp_references()
+  else
+    vim.lsp.buf.references()
+  end
+end, { buffer = true, silent = true, desc = "Oberon: find references" })
+-- rename is NVChad's existing <leader>ra (vim.lsp.buf.rename) — attaches to our client too

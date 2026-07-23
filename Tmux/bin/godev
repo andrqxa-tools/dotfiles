@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# godev — підняти (або перевідкрити) tmux-сесію "godev": одне вікно,
+# поділене на 4 панелі (2x2), у каталозі проєкту.
+#
+# Usage: godev [project-dir]     # без аргумента — поточний каталог
+#
+# Розкладка описана декларативно у ~/.config/smug/godev.yml (symlink на
+# dotfiles/Tmux/godev.yml); цей скрипт лише підставляє root і атачиться.
+set -euo pipefail
+
+root="$(realpath "${1:-$PWD}")"
+[ -d "$root" ] || { echo "godev: no such directory: $root" >&2; exit 1; }
+
+exec smug start godev root="$root" --attach

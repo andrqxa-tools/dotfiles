@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# aidev — tmux-сесія "агент + діфи": одне вікно, зліва claude/codex,
+# справа lazygit, який показує повний діф кожного зміненого файлу
+# (клік мишею по файлу у списку зліва в lazygit).
+#
+# Usage: aidev [project-dir] [agent]
+#   aidev                     # claude у поточному каталозі
+#   aidev ~/proj codex        # codex у ~/proj
+#
+# Розкладка декларативна: ~/.config/smug/aidev.yml (symlink на
+# dotfiles/Tmux/aidev.yml); цей скрипт підставляє root/agent і атачиться.
+set -euo pipefail
+
+root="$(realpath "${1:-$PWD}")"
+agent="${2:-claude}"
+[ -d "$root" ] || { echo "aidev: no such directory: $root" >&2; exit 1; }
+
+exec smug start aidev root="$root" agent="$agent" --attach
