@@ -143,8 +143,11 @@ install_android_sdk() {
 # (loader-блок уже есть). Так конфиг переносится на другую машину вместе с репо.
 setup_env() {
   log "Подключаю env через ~/.config/profile.d (dotfiles)"
-  local repo_root env_src env_dst
-  repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  local repo_root env_src env_dst self
+  # readlink -f: скрипт может вызываться через симлинк (напр. из каталога проекта) —
+  # BASH_SOURCE тогда указывает на симлинк, а нам нужен реальный путь в dotfiles.
+  self="$(readlink -f "${BASH_SOURCE[0]}")"
+  repo_root="$(cd "$(dirname "$self")/.." && pwd)"
   env_src="$repo_root/Shell/profile.d/flutter.sh"
   env_dst="$HOME/.config/profile.d/flutter.sh"
   if [ ! -f "$env_src" ]; then
