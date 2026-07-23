@@ -24,6 +24,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Editors/Geany/` | GTK2 rc |
 | `Fonts/` | JetBrainsMono Nerd Font installers (linux / termux / windows) |
 | `Go/` | Go toolchain installer + project scaffolding scripts |
+| `Flutter/` | Android SDK + JDK17 + FVM/Flutter installer for the mabrook projects (SDK on `/data`) |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
@@ -57,6 +58,11 @@ ln -sf "$PWD/Tmux/tmux.conf" ~/.config/tmux/tmux.conf
 
 # IntelliJ IDEA VM options (OS-independent, version-independent)
 export IDEA_VM_OPTIONS="$PWD/IDE/IntelliJ-IDEA/idea64.vmoptions"   # add to your shell rc
+
+# Flutter/Android toolchain env (mabrook) — sourced by the profile.d loader
+ln -sf "$PWD/Shell/profile.d/flutter.sh" ~/.config/profile.d/flutter.sh
+# then run the installer for the SDK/JDK/FVM (see Flutter/README.md):
+#   ./Flutter/setup-android-env.sh --emulator
 ```
 
 VS Code extensions are managed by built-in Settings Sync, not tracked here.
