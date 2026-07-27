@@ -29,6 +29,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
 | `Radio/` | Console internet radio for mpv with a genre-based station catalog |
+| `YouTube/` | Console YouTube for mpv + yt-dlp — search, audio, terminal video, bookmarks |
 
 ## Usage
 
@@ -90,6 +91,21 @@ radio
 
 The installer supports apt, dnf, pacman and zypper. It deploys only user files
 under `~/.local/bin` and `~/.config/radio`; the global mpv config is untouched.
+
+### YouTube (mpv + yt-dlp)
+
+Install `mpv`, `fzf`, a fresh `yt-dlp` (via pipx) and the console `yt` command:
+
+```sh
+./YouTube/install-linux.sh
+yt queen bohemian rhapsody     # search, pick in fzf, listen
+yt v <query|URL>               # video inside the terminal (kitty/sixel/tct)
+yt fav                         # play a bookmarked channel or playlist
+```
+
+Deploys only user files under `~/.local/bin` and `~/.config/yt`. See
+[`YouTube/README.md`](YouTube/README.md) for bookmarks, terminal-video backends
+and troubleshooting.
 
 ### Go
 

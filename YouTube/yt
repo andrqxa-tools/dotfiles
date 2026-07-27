@@ -1,0 +1,503 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+yt_dir="${YT_CONFIG_DIR:-$config_home/yt}"
+bookmarks_file="${YT_BOOKMARKS_FILE:-$yt_dir/bookmarks.tsv}"
+audio_options_file="${YT_MPV_AUDIO_CONFIG:-$yt_dir/mpv-audio.conf}"
+video_options_file="${YT_MPV_VIDEO_CONFIG:-$yt_dir/mpv-video.conf}"
+search_limit="${YT_SEARCH_LIMIT:-25}"
+playlist_limit="${YT_PLAYLIST_LIMIT:-30}"
+download_dir="${YT_DOWNLOAD_DIR:-$HOME/Music/youtube}"
+
+die() {
+    printf 'yt: %s\n' "$*" >&2
+    exit 1
+}
+
+require_mpv() {
+    command -v mpv >/dev/null 2>&1 || die 'mpv не найден в PATH'
+    command -v yt-dlp >/dev/null 2>&1 || die 'yt-dlp не найден в PATH (pipx install yt-dlp)'
+}
+
+require_config() {
+    [[ -r "$audio_options_file" ]] || die "не найден конфиг mpv: $audio_options_file"
+    [[ -r "$video_options_file" ]] || die "не найден конфиг mpv: $video_options_file"
+}
+
+require_bookmarks() {
+    [[ -r "$bookmarks_file" ]] || die "не найден файл закладок: $bookmarks_file"
+}
+
+usage() {
+    cat <<'EOF'
+Консольный YouTube на базе mpv и yt-dlp.
+
+Использование:
+  yt <запрос>               найти и слушать (только звук)
+  yt <URL>                  играть ссылку, плейлист или канал
+  yt v <запрос|URL>         то же, но с видео прямо в терминале
+  yt fav [категория]        выбрать из закладок
+  yt add <URL> [имя] [кат]  добавить закладку
+  yt list [категория]       показать закладки
+  yt cats                   показать категории закладок
+  yt edit                   открыть закладки в $EDITOR
+  yt dl <запрос|URL>        скачать звук в mp3
+  yt update                 обновить yt-dlp
+  yt help                   показать эту справку
+
+Примеры:
+  yt queen bohemian rhapsody
+  yt v кличко бокс
+  yt https://youtu.be/fJ9rUzIMcZQ
+  yt fav Лекции
+  yt dl brian tracy
+
+В меню поиска:
+  Tab       отметить несколько пунктов (соберётся плейлист)
+  Enter     выбрать, Esc — отмена
+
+Во время воспроизведения:
+  9 / 0     тише / громче
+  m         выключить или включить звук
+  Space     пауза
+  < / >     предыдущий / следующий трек
+  [ / ]     скорость
+  q         остановить и выйти
+
+Переменные окружения:
+  YT_SEARCH_LIMIT           сколько результатов запрашивать (по умолчанию 25)
+  YT_PLAYLIST_LIMIT         сколько позиций брать из канала/плейлиста (30)
+  YT_SHUFFLE=1              перемешать плейлист
+  YT_VO                     видеовывод: kitty | sixel | tct (иначе автовыбор)
+  YT_COOKIES_FROM_BROWSER   firefox | chromium | ... против «Sign in to confirm»
+  YT_DOWNLOAD_DIR           куда качать (по умолчанию ~/Music/youtube)
+EOF
+}
+
+# Read valid records only. Format: category<TAB>name<TAB>url
+records() {
+    awk -F '\t' '
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        NF >= 3 { print $1 "\t" $2 "\t" $3 }
+    ' "$bookmarks_file"
+}
+
+# pick_line <prompt> [fields] [multi]
+pick_line() {
+    local prompt="$1"
+    local fields="${2:-1..}"
+    local multi="${3:-}"
+    local -a lines labels
+    local line selected
+    local i
+
+    if command -v fzf >/dev/null 2>&1; then
+        fzf \
+            --delimiter=$'\t' \
+            --with-nth="$fields" \
+            --height=80% \
+            --layout=reverse \
+            --border \
+            --cycle \
+            --prompt="$prompt " \
+            ${multi:+--multi}
+        return
+    fi
+
+    mapfile -t lines
+    ((${#lines[@]})) || return 1
+    for line in "${lines[@]}"; do
+        labels+=("${line//$'\t'/ — }")
+    done
+
+    printf 'Выберите пункт и нажмите Enter:\n' >/dev/tty
+    PS3="$prompt "
+    select selected in "${labels[@]}"; do
+        if [[ "$REPLY" =~ ^[0-9]+$ ]] && ((REPLY >= 1 && REPLY <= ${#lines[@]})); then
+            i=$((REPLY - 1))
+            printf '%s\n' "${lines[$i]}"
+            return 0
+        fi
+        printf 'Неверный номер.\n' >/dev/tty
+    done </dev/tty
+}
+
+is_url() {
+    [[ "$1" =~ ^https?:// ]]
+}
+
+detect_vo() {
+    if [[ -n "${YT_VO:-}" ]]; then
+        printf '%s\n' "$YT_VO"
+        return
+    fi
+    # Graphics protocols do not survive tmux reliably, so fall back to ANSI blocks.
+    if [[ -n "${TMUX:-}" ]]; then
+        printf 'tct\n'
+        return
+    fi
+    if [[ -n "${KITTY_WINDOW_ID:-}" ]]; then
+        printf 'kitty\n'
+        return
+    fi
+    case "${TERM_PROGRAM:-}:${TERM:-}" in
+        *foot*|*WezTerm*|*wezterm*|*mlterm*|*contour*) printf 'sixel\n' ;;
+        *) printf 'tct\n' ;;
+    esac
+}
+
+mpv_common_args() {
+    printf '%s\n' "--script-opts=ytdl_hook-ytdl_path=$(command -v yt-dlp)"
+    if [[ -n "${YT_COOKIES_FROM_BROWSER:-}" ]]; then
+        printf '%s\n' "--ytdl-raw-options=cookies-from-browser=$YT_COOKIES_FROM_BROWSER"
+    fi
+}
+
+is_single_video() {
+    [[ "$1" =~ (\?|&)v=|youtu\.be/ ]] && [[ "$1" != *list=* ]]
+}
+
+# Channels, playlists and mixes are expanded here instead of by mpv: mpv's
+# ytdl_hook resolves every entry in full, which takes minutes for a channel.
+# A flat yt-dlp pass costs a second or two and mpv then resolves lazily.
+expand_target() {
+    local url="$1"
+    local expanded
+
+    if is_single_video "$url"; then
+        printf '%s\n' "$url"
+        return
+    fi
+
+    printf 'Разворачиваю плейлист (до %s поз.)…\n' "$playlist_limit" >&2
+    expanded="$(yt-dlp \
+        --no-warnings \
+        --ignore-errors \
+        --flat-playlist \
+        --playlist-end "$playlist_limit" \
+        --print '%(url)s' \
+        -- "$url" 2>/dev/null)"
+
+    if [[ -n "$expanded" ]]; then
+        printf '%s\n' "$expanded"
+    else
+        printf '%s\n' "$url"
+    fi
+}
+
+# play <mode> <url>...
+play() {
+    local mode="$1"
+    shift
+    local -a args=() targets=()
+    local vo url line
+
+    for url in "$@"; do
+        while IFS= read -r line; do
+            [[ -n "$line" ]] || continue
+            targets+=("$line")
+        done < <(expand_target "$url")
+    done
+    ((${#targets[@]})) || die 'нечего играть'
+
+    mapfile -t args < <(mpv_common_args)
+    [[ -n "${YT_SHUFFLE:-}" ]] && args+=(--shuffle)
+
+    if [[ "$mode" == video ]]; then
+        vo="$(detect_vo)"
+        args+=(--include="$video_options_file" "--vo=$vo")
+        printf '\n▶ видео в терминале (--vo=%s), %d поз.\n\n' "$vo" "${#targets[@]}"
+    else
+        args+=(--include="$audio_options_file")
+        printf '\n▶ звук, %d поз.\n\n' "${#targets[@]}"
+    fi
+
+    exec mpv "${args[@]}" -- "${targets[@]}"
+}
+
+search() {
+    local query="$1"
+
+    yt-dlp \
+        --flat-playlist \
+        --no-warnings \
+        --ignore-errors \
+        --print "%(title)s"$'\t'"%(duration_string)s"$'\t'"%(channel)s"$'\t'"%(url)s" \
+        "ytsearch${search_limit}:${query}"
+}
+
+read_query() {
+    local query
+    printf 'Что искать на YouTube? ' >/dev/tty
+    IFS= read -r query </dev/tty || return 1
+    [[ -n "$query" ]] || return 1
+    printf '%s\n' "$query"
+}
+
+# search_and_play <mode> <query>
+search_and_play() {
+    local mode="$1"
+    local query="$2"
+    local results selected
+    local -a urls=()
+    local line
+
+    [[ -n "$query" ]] || query="$(read_query)" || exit 0
+
+    printf 'Ищу «%s»…\n' "$query" >&2
+    results="$(search "$query")"
+    [[ -n "$results" ]] || die "ничего не найдено: $query"
+
+    selected="$(printf '%s\n' "$results" | pick_line 'Видео>' '1,2,3' multi)" || exit 0
+    [[ -n "$selected" ]] || exit 0
+
+    while IFS= read -r line; do
+        [[ -n "$line" ]] || continue
+        urls+=("${line##*$'\t'}")
+    done <<<"$selected"
+
+    ((${#urls[@]})) || exit 0
+    play "$mode" "${urls[@]}"
+}
+
+# play_target <mode> <args...> — URL напрямую или поиск
+play_target() {
+    local mode="$1"
+    shift
+
+    if (($# == 1)) && is_url "$1"; then
+        play "$mode" "$1"
+    else
+        search_and_play "$mode" "$*"
+    fi
+}
+
+categories() {
+    records | awk -F '\t' '
+        !seen[$1]++ { order[++n]=$1 }
+        { count[$1]++ }
+        END { for (i=1; i<=n; i++) print order[i] "\t" count[order[i]] }'
+}
+
+resolve_category() {
+    local requested="${1:-}"
+
+    categories | awk -F '\t' -v wanted="$requested" '
+        tolower($1) == tolower(wanted) { print $1; exit }
+    '
+}
+
+# play_favourite <mode> <category?>
+play_favourite() {
+    local mode="$1"
+    local requested="${2:-}"
+    local category='' data selected
+
+    require_bookmarks
+    if [[ -n "$requested" ]]; then
+        category="$(resolve_category "$requested")"
+        [[ -n "$category" ]] || die "неизвестная категория: $requested (см. yt cats)"
+        data="$(records | awk -F '\t' -v wanted="$category" '$1 == wanted { print $2 "\t" $3 }')"
+        selected="$(printf '%s\n' "$data" | pick_line 'Закладка>' '1' multi)" || exit 0
+    else
+        selected="$(records | pick_line 'Закладка>' '1,2' multi)" || exit 0
+    fi
+    [[ -n "$selected" ]] || exit 0
+
+    local -a urls=()
+    local line
+    while IFS= read -r line; do
+        [[ -n "$line" ]] || continue
+        urls+=("${line##*$'\t'}")
+    done <<<"$selected"
+
+    ((${#urls[@]})) || exit 0
+    play "$mode" "${urls[@]}"
+}
+
+add_bookmark() {
+    local url="${1:-}"
+    local name="${2:-}"
+    local category="${3:-Разное}"
+
+    [[ -n "$url" ]] || die 'использование: yt add <URL> [имя] [категория]'
+    is_url "$url" || die "это не ссылка: $url"
+
+    if [[ -z "$name" ]]; then
+        command -v yt-dlp >/dev/null 2>&1 || die 'нужен yt-dlp, чтобы узнать название'
+        printf 'Узнаю название…\n' >&2
+        # For channels and playlists the container title is the useful one.
+        if [[ ! "$url" =~ (v=|youtu\.be/) || "$url" == *list=* ]]; then
+            name="$(yt-dlp \
+                --no-warnings \
+                --ignore-no-formats-error \
+                --flat-playlist \
+                --playlist-items 0 \
+                --print 'playlist:%(title)s' \
+                -- "$url" 2>/dev/null | head -n 1)"
+        fi
+        # Single video, or a container without a title of its own.
+        if [[ -z "$name" ]]; then
+            name="$(yt-dlp \
+                --no-warnings \
+                --ignore-no-formats-error \
+                --flat-playlist \
+                --playlist-items 1 \
+                --print '%(title)s' \
+                -- "$url" 2>/dev/null | head -n 1)"
+        fi
+        name="${name% - Videos}"
+        [[ -n "$name" ]] || die "не удалось получить название: $url"
+    fi
+
+    mkdir -p "$(dirname "$bookmarks_file")"
+    [[ -e "$bookmarks_file" ]] || printf '# category\tname\turl\n' >"$bookmarks_file"
+
+    if [[ -r "$bookmarks_file" ]] && records | awk -F '\t' -v u="$url" '$3 == u { found = 1 } END { exit !found }'; then
+        die "уже в закладках: $url"
+    fi
+
+    printf '%s\t%s\t%s\n' "$category" "${name//$'\t'/ }" "$url" >>"$bookmarks_file"
+    printf 'Добавлено: %s — %s\n' "$category" "$name"
+}
+
+list_bookmarks() {
+    local requested="${1:-}"
+    local category='' data
+
+    require_bookmarks
+    if [[ -n "$requested" ]]; then
+        category="$(resolve_category "$requested")"
+        [[ -n "$category" ]] || die "неизвестная категория: $requested (см. yt cats)"
+        data="$(records | awk -F '\t' -v wanted="$category" '$1 == wanted')"
+    else
+        data="$(records)"
+    fi
+
+    if command -v column >/dev/null 2>&1; then
+        { printf 'КАТЕГОРИЯ\tНАЗВАНИЕ\tССЫЛКА\n'; printf '%s\n' "$data"; } | column -t -s $'\t'
+    else
+        printf '%-20s  %s\n' 'КАТЕГОРИЯ' 'НАЗВАНИЕ'
+        printf '%s\n' "$data" | awk -F '\t' '{ printf "%-20s  %s\n", $1, $2 }'
+    fi
+}
+
+download() {
+    local -a targets=()
+    local results selected line
+
+    (($#)) || die 'использование: yt dl <запрос|URL>'
+
+    if (($# == 1)) && is_url "$1"; then
+        targets=("$1")
+    else
+        printf 'Ищу «%s»…\n' "$*" >&2
+        results="$(search "$*")"
+        [[ -n "$results" ]] || die "ничего не найдено: $*"
+        selected="$(printf '%s\n' "$results" | pick_line 'Скачать>' '1,2,3' multi)" || exit 0
+        [[ -n "$selected" ]] || exit 0
+        while IFS= read -r line; do
+            [[ -n "$line" ]] || continue
+            targets+=("${line##*$'\t'}")
+        done <<<"$selected"
+    fi
+
+    ((${#targets[@]})) || exit 0
+    mkdir -p "$download_dir"
+    printf 'Качаю в %s\n' "$download_dir"
+    exec yt-dlp \
+        --extract-audio \
+        --audio-format mp3 \
+        --audio-quality 0 \
+        --embed-thumbnail \
+        --embed-metadata \
+        --no-playlist \
+        --output "$download_dir/%(title)s.%(ext)s" \
+        ${YT_COOKIES_FROM_BROWSER:+--cookies-from-browser "$YT_COOKIES_FROM_BROWSER"} \
+        -- "${targets[@]}"
+}
+
+update_ytdlp() {
+    command -v yt-dlp >/dev/null 2>&1 || die 'yt-dlp не найден в PATH'
+
+    if command -v pipx >/dev/null 2>&1 && pipx list --short 2>/dev/null | grep -q '^yt-dlp '; then
+        exec pipx upgrade yt-dlp
+    fi
+    case "$(command -v yt-dlp)" in
+        "$HOME"/*) exec yt-dlp -U ;;
+    esac
+    printf 'yt-dlp установлен системно (%s).\n' "$(command -v yt-dlp)"
+    printf 'Пакетная версия часто устаревает и ломается. Лучше: pipx install yt-dlp\n'
+}
+
+main() {
+    local command="${1:-}"
+
+    case "$command" in
+        help|--help|-h)
+            usage
+            return
+            ;;
+        edit|--edit|-e)
+            require_bookmarks
+            exec "${EDITOR:-nano}" "$bookmarks_file"
+            ;;
+        cats|categories|--categories)
+            require_bookmarks
+            categories | awk -F '\t' '{ printf "%-20s %2d шт.\n", $1, $2 }'
+            return
+            ;;
+        list|--list|-l)
+            shift
+            list_bookmarks "${*:-}"
+            return
+            ;;
+        add|--add)
+            shift
+            require_mpv
+            add_bookmark "$@"
+            return
+            ;;
+        dl|download|--download)
+            shift
+            require_mpv
+            download "$@"
+            ;;
+        update|--update|-u)
+            update_ytdlp
+            return
+            ;;
+    esac
+
+    require_mpv
+    require_config
+
+    case "$command" in
+        '' )
+            search_and_play audio ''
+            ;;
+        v|video|--video)
+            shift
+            play_target video "$@"
+            ;;
+        a|audio|--audio)
+            shift
+            play_target audio "$@"
+            ;;
+        fav|favourites|favorites|--fav)
+            shift
+            play_favourite audio "${1:-}"
+            ;;
+        favv|--fav-video)
+            shift
+            play_favourite video "${1:-}"
+            ;;
+        *)
+            play_target audio "$@"
+            ;;
+    esac
+}
+
+main "$@"

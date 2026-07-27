@@ -1,0 +1,14 @@
+# Bookmarks for the `yt` command.
+# Format: category<TAB>name<TAB>URL   (tab separated, one entry per line)
+# Lines starting with # and blank lines are ignored.
+# Channels, playlists and mixes work too — mpv expands them into a playlist.
+# Add entries with:  yt add <URL> [name] [category]
+
+Музика	Lofi Girl	https://www.youtube.com/@LofiGirl
+Музика	Chillhop Music	https://www.youtube.com/@ChillhopMusic
+Лекції	Lex Fridman Podcast	https://www.youtube.com/@lexfridman
+Лекції	Computerphile	https://www.youtube.com/@Computerphile
+Лекції	3Blue1Brown	https://www.youtube.com/@3blue1brown
+Лекції	Veritasium	https://www.youtube.com/@veritasium
+Лекції	TED	https://www.youtube.com/@TED
+Go	Gopher Academy	https://www.youtube.com/@GopherAcademy
