@@ -2,13 +2,40 @@
 # godev — підняти (або перевідкрити) tmux-сесію "godev": одне вікно,
 # поділене на 4 панелі (2x2), у каталозі проєкту.
 #
-# Usage: godev [project-dir]     # без аргумента — поточний каталог
+# Ім'я сесії унікальне: godev-<каталог> (+ -2, -3, ... якщо така сесія вже
+# відкрита), тому скрипт можна запускати в кількох екземплярах паралельно.
+#
+# Usage: godev [project-dir] [-s NAME] [-n]
+#   godev                # поточний каталог      -> godev-<dir>
+#   godev ~/proj         # ~/proj                -> godev-proj
+#   godev -n             # завжди нова сесія     -> godev-<dir>-2
+#   godev -s build       # явне ім'я сесії       -> build
+#   GODEV_SESSION=build godev
 #
 # Розкладка описана декларативно у ~/.config/smug/godev.yml (symlink на
-# dotfiles/Tmux/godev.yml); цей скрипт лише підставляє root і атачиться.
+# dotfiles/Tmux/godev.yml); цей скрипт підставляє session/root і атачиться.
 set -euo pipefail
 
-root="$(realpath "${1:-$PWD}")"
+# shellcheck source=_devsession.sh
+. "$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")/_devsession.sh"
+
+session="${GODEV_SESSION:-}"
+force_new=0
+args=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -s|--session) session="${2:?godev: -s requires a session name}"; shift 2 ;;
+    -n|--new)     force_new=1; shift ;;
+    -h|--help)    sed -n '2,17p' "$(realpath "${BASH_SOURCE[0]}")" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --)           shift; args+=("$@"); break ;;
+    *)            args+=("$1"); shift ;;
+  esac
+done
+
+root="$(realpath "${args[0]:-$PWD}")"
 [ -d "$root" ] || { echo "godev: no such directory: $root" >&2; exit 1; }
 
-exec smug start godev root="$root" --attach
+[ -n "$session" ] || session="$(ds_pick_session godev "$root" "$force_new")"
+
+exec smug start godev session="$session" root="$root" --attach

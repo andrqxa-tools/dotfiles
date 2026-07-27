@@ -1,8 +1,8 @@
 # Go dev session: ОДНЕ вікно, поділене на 4 панелі (2x2, tiled) — те саме,
 # що вручну зібране вікно mabrook:1. Запускається обгорткою `godev [dir]`
-# (див. Tmux/bin/godev), яка підставляє root=<каталог проєкту>.
+# (див. Tmux/bin/godev), яка підставляє session=<унікальне ім'я> і root.
 # Symlink: ~/.config/smug/godev.yml -> цей файл.
-session: godev
+session: ${session}
 root: ${root}
 
 windows:

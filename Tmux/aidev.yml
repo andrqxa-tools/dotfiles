@@ -1,8 +1,9 @@
 # AI-dev сесія: ОДНЕ вікно, дві панелі поруч — зліва агент (claude/codex),
 # справа lazygit з повними діфами файлів, які агент змінює.
-# Запускається обгорткою `aidev [dir] [agent]` (див. Tmux/bin/aidev).
+# Запускається обгорткою `aidev [dir] [agent]` (див. Tmux/bin/aidev), яка
+# підставляє session=<унікальне ім'я>, root=<каталог> і agent=<агент>.
 # Symlink: ~/.config/smug/aidev.yml -> цей файл.
-session: aidev
+session: ${session}
 root: ${root}
 
 windows:

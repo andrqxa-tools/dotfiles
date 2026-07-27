@@ -3,16 +3,41 @@
 # справа lazygit, який показує повний діф кожного зміненого файлу
 # (клік мишею по файлу у списку зліва в lazygit).
 #
-# Usage: aidev [project-dir] [agent]
-#   aidev                     # claude у поточному каталозі
-#   aidev ~/proj codex        # codex у ~/proj
+# Ім'я сесії унікальне: aidev-<каталог> (+ -2, -3, ... якщо така сесія вже
+# відкрита), тому скрипт можна запускати в кількох екземплярах паралельно.
+#
+# Usage: aidev [project-dir] [agent] [-s NAME] [-n]
+#   aidev                     # claude у поточному каталозі -> aidev-<dir>
+#   aidev ~/proj codex        # codex у ~/proj             -> aidev-proj
+#   aidev -n                  # завжди нова сесія          -> aidev-<dir>-2
+#   aidev -s review           # явне ім'я сесії            -> review
+#   AIDEV_SESSION=review aidev
 #
 # Розкладка декларативна: ~/.config/smug/aidev.yml (symlink на
-# dotfiles/Tmux/aidev.yml); цей скрипт підставляє root/agent і атачиться.
+# dotfiles/Tmux/aidev.yml); цей скрипт підставляє session/root/agent і атачиться.
 set -euo pipefail
 
-root="$(realpath "${1:-$PWD}")"
-agent="${2:-claude}"
+# shellcheck source=_devsession.sh
+. "$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")/_devsession.sh"
+
+session="${AIDEV_SESSION:-}"
+force_new=0
+args=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -s|--session) session="${2:?aidev: -s requires a session name}"; shift 2 ;;
+    -n|--new)     force_new=1; shift ;;
+    -h|--help)    sed -n '2,18p' "$(realpath "${BASH_SOURCE[0]}")" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --)           shift; args+=("$@"); break ;;
+    *)            args+=("$1"); shift ;;
+  esac
+done
+
+root="$(realpath "${args[0]:-$PWD}")"
+agent="${args[1]:-claude}"
 [ -d "$root" ] || { echo "aidev: no such directory: $root" >&2; exit 1; }
 
-exec smug start aidev root="$root" agent="$agent" --attach
+[ -n "$session" ] || session="$(ds_pick_session aidev "$root" "$force_new")"
+
+exec smug start aidev session="$session" root="$root" agent="$agent" --attach
