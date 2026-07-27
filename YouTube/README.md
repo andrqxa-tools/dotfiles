@@ -110,7 +110,9 @@ single video.
 - **`Requested format is not available`** — a stale `yt-dlp`. Run `yt update`,
   or install it with `pipx` if it came from the distro package.
 - **`No supported JavaScript runtime could be found`** — a `yt-dlp` warning;
-  playback still works, but installing `deno` restores the formats that need
-  signature deciphering.
+  playback still works, but the format list is truncated. Install the runtime
+  with [`../Deno/deno-install.sh`](../Deno/deno-install.sh) — `deno` is the only
+  engine `yt-dlp` enables by default — and the high-bitrate audio formats
+  (`251 opus 133k`, `140 m4a 129k`) come back.
 - **`yt: mpv не найден в PATH`** — re-run `./install-linux.sh`.
 - `yt dl` needs `ffmpeg` for mp3 extraction and thumbnail embedding.

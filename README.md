@@ -24,6 +24,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Editors/Geany/` | GTK2 rc |
 | `Fonts/` | JetBrainsMono Nerd Font installers (linux / termux / windows) |
 | `Go/` | Go toolchain installer + project scaffolding scripts |
+| `Deno/` | Deno runtime installer (the JS runtime `yt-dlp` needs) |
 | `Flutter/` | Android SDK + JDK17 + FVM/Flutter installer for the mabrook projects (SDK on `/data`) |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
@@ -105,7 +106,27 @@ yt fav                         # play a bookmarked channel or playlist
 
 Deploys only user files under `~/.local/bin` and `~/.config/yt`. See
 [`YouTube/README.md`](YouTube/README.md) for bookmarks, terminal-video backends
-and troubleshooting.
+and troubleshooting. For the full YouTube format list, add the Deno runtime
+below — `yt-dlp` needs a JS engine to decipher signatures.
+
+### Deno
+
+Only reason it is here: `yt-dlp` needs a JavaScript runtime, and `deno` is the
+only one it enables by default. Without it YouTube exposes a truncated format
+list and `yt-dlp` warns `No supported JavaScript runtime could be found`.
+
+```sh
+./Deno/deno-install.sh                     # latest, auto arch
+./Deno/deno-install.sh 2.9.4 amd64         # or pin version + arch
+./Deno/deno-install.sh --force             # re-download the same version
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File Deno\deno-install.ps1
+```
+
+- Linux: single static binary at `/opt/programming/deno/bin/deno`; env comes
+  from `Shell/profile.d/deno.sh`, symlinked into `~/.config/profile.d/`.
+- Windows: `C:\Programms\deno\bin\deno.exe` + persistent per-user env/PATH.
 
 ### Go
 
