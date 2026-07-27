@@ -25,7 +25,13 @@
 #   ./setup-android-env.sh --emulator # то же + system image и AVD
 #   ./setup-android-env.sh --no-fvm   # пропустить установку FVM/Flutter
 #
-# Скрипт идемпотентен: повторный запуск ничего не ломает.
+# ЗАПУСКАТЬ ОБЫЧНЫМ ЮЗЕРОМ, НЕ через sudo — скрипт сам вызывает sudo там, где он
+# нужен. Под root'ом $HOME становится /root: symlink env, ~/.pub-cache/bin/fvm и
+# AVD уедут в /root, а SDK с FVM-кэшем станут root-owned (git ругнётся
+# "detected dubious ownership", Gradle/fvm не смогут в них писать).
+#
+# Скрипт идемпотентен: повторный запуск ничего не ломает. Если предыдущий запуск
+# всё-таки был под sudo — владелец SDK/FVM-кэша чинится автоматически.
 # Рассчитан на Ubuntu 24.04 (apt). Использует sudo только для apt-пакетов.
 # ---------------------------------------------------------------------------
 set -euo pipefail
@@ -68,7 +74,52 @@ done
 
 log()  { printf '\n\033[1;34m==>\033[0m \033[1m%s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
+err()  { printf '\n\033[1;31m[ОШИБКА] %s\033[0m\n' "$*" >&2; }
 ok()   { printf '\033[1;32m[ok] %s\033[0m\n' "$*"; }
+
+# --------------------------- 0. запуск не под root --------------------------
+# Половина шагов пишет в $HOME (env-symlink, ~/.pub-cache/bin/fvm, ~/.android/avd),
+# а sudo подменяет $HOME на /root — под root'ом скрипт «успешно» настроит чужого
+# юзера и оставит SDK root-owned. Проверяем и до, и после того как что-либо сделали.
+ensure_not_root() {
+  [ "${EUID:-$(id -u)}" -ne 0 ] && return
+  err "Скрипт запущен под root (sudo). Так нельзя — он сам вызывает sudo где надо."
+  cat >&2 <<'EOF'
+  Под sudo сломается:
+    * env-symlink уйдёт в /root/.config/profile.d/ вместо твоего $HOME
+    * fvm поставится в /root/.pub-cache/bin (в PATH его не будет)
+    * AVD создастся в /root/.android/avd (эмулятор его не найдёт)
+    * SDK и FVM-кэш станут root-owned -> "dubious ownership" в git, Gradle не пишет
+
+  Запусти без sudo:
+    ./setup-android-env.sh
+EOF
+  # SUDO_USER подсказывает, из-под кого делали sudo — упоминаем, если это не root.
+  if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+    printf '\n  Т.е.: sudo -u %s ./setup-android-env.sh  (или просто выйди из sudo)\n' "$SUDO_USER" >&2
+  fi
+  exit 1
+}
+
+# ------------------- 0.5 починка владельца после запуска под sudo ------------
+# Разовая самолечилка для машин, где скрипт уже прогнали через sudo: chown -R на
+# SDK и FVM-кэш. Без неё `fvm flutter` падает на "detected dubious ownership"
+# (git отказывается работать с репо чужого владельца), а sdkmanager/Gradle не
+# могут дописать в SDK. Каталоги может ещё не существовать — это норма.
+fix_ownership() {
+  local d owner fixed=false
+  for d in "$ANDROID_SDK_DIR" "$FVM_CACHE_PATH"; do
+    [ -e "$d" ] || continue
+    owner="$(stat -c '%U' "$d")"
+    [ "$owner" = "$(id -un)" ] && continue
+    log "Владелец $d — $owner, а не $(id -un) (следы запуска под sudo)"
+    warn "Чиню: sudo chown -R $(id -un):$(id -gn) $d"
+    sudo chown -R "$(id -un):$(id -gn)" "$d"
+    fixed=true
+  done
+  [ "$fixed" = true ] && ok "Владелец исправлен"
+  return 0
+}
 
 # --------------------------- 1. JDK 17 --------------------------------------
 install_jdk17() {
@@ -217,6 +268,8 @@ finalize() {
 }
 
 main() {
+  ensure_not_root
+  fix_ownership
   install_deps
   install_jdk17
   install_android_sdk
