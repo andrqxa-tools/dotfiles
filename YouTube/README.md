@@ -24,6 +24,8 @@ It deploys:
 ~/.config/yt/bookmarks.tsv      # seeded once, never overwritten afterwards
 ~/.config/yt/mpv-audio.conf
 ~/.config/yt/mpv-video.conf
+~/.config/yt/mpv-input.conf    # key bindings (seek, percent jumps)
+~/.config/yt/yt_seek.lua       # the typed «перейти к» prompt
 ```
 
 The global `~/.config/mpv/mpv.conf` is not touched; `yt` uses its own isolated
@@ -53,8 +55,39 @@ yt update                      # upgrade yt-dlp
 ```
 
 In the `fzf` menu, type to search, `Tab` marks several entries (they become one
-mpv playlist), `Enter` selects, `Esc` cancels. During playback: `9`/`0` volume,
-`m` mute, `Space` pause, `<`/`>` previous/next, `[`/`]` speed, `q` quit.
+mpv playlist), `Enter` selects, `Esc` cancels.
+
+## Playback keys
+
+| Key | Action |
+|-----|--------|
+| `→` / `←` | seek ±5 s |
+| `Shift+→` / `Shift+←` | seek ±30 s |
+| `↑` / `↓` | seek ±60 s |
+| `0` … `9` | jump to 0 %, 10 % … 90 % of the length |
+| `Home` | back to the start |
+| `t` or `g` | type an exact position, `Enter` confirms, `Esc` cancels |
+| `/` / `*` | volume down/up |
+| `m` | mute |
+| `Space` | pause |
+| `<` / `>` | previous / next entry |
+| `[` / `]` | speed |
+| `q` | quit |
+
+The `t` prompt accepts `mm:ss`, `h:mm:ss`, bare seconds (`90`), a percentage
+(`42%`) and relative jumps (`+30`, `-1:30`). `Backspace` erases. An absolute
+target beyond the end is clamped to the end instead of skipping to the next
+entry, so a mistyped `1:02:03` in a short clip does not kill playback; relative
+jumps keep mpv's behaviour and roll over to the next entry.
+
+Digits are mpv's contrast/brightness/gamma keys by default — useless for
+YouTube, hence the percent jumps. Volume is unaffected: `/` and `*` are mpv
+defaults too, only `9`/`0` moved. Bindings live in `mpv-input.conf` (loaded with
+`--input-conf`, so every other mpv default stays), the prompt in `yt_seek.lua`
+(loaded with `--script`). mpv 0.38 added `mp.input.get` for exactly this, but
+0.37 — the Ubuntu 24.04 build — has no such API, so the script collects the line
+through `any_unicode` the way `console.lua` does; that also shadows `q` while
+typing.
 
 Channel and playlist URLs are expanded by `yt` with a flat `yt-dlp` pass before
 mpv sees them. Handing a channel URL to mpv directly makes its `ytdl_hook`
@@ -100,7 +133,7 @@ single video.
 | `YT_COOKIES_FROM_BROWSER` | `firefox`, `chromium`, … — see below |
 | `YT_DOWNLOAD_DIR` | download target (default `~/Music/youtube`) |
 | `YT_CONFIG_DIR` | config dir (default `~/.config/yt`) |
-| `YT_BOOKMARKS_FILE`, `YT_MPV_AUDIO_CONFIG`, `YT_MPV_VIDEO_CONFIG` | override single paths |
+| `YT_BOOKMARKS_FILE`, `YT_MPV_AUDIO_CONFIG`, `YT_MPV_VIDEO_CONFIG`, `YT_MPV_INPUT_CONFIG`, `YT_SEEK_SCRIPT` | override single paths |
 
 ## Troubleshooting
 

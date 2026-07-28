@@ -7,6 +7,8 @@ yt_dir="${YT_CONFIG_DIR:-$config_home/yt}"
 bookmarks_file="${YT_BOOKMARKS_FILE:-$yt_dir/bookmarks.tsv}"
 audio_options_file="${YT_MPV_AUDIO_CONFIG:-$yt_dir/mpv-audio.conf}"
 video_options_file="${YT_MPV_VIDEO_CONFIG:-$yt_dir/mpv-video.conf}"
+input_options_file="${YT_MPV_INPUT_CONFIG:-$yt_dir/mpv-input.conf}"
+seek_script_file="${YT_SEEK_SCRIPT:-$yt_dir/yt_seek.lua}"
 search_limit="${YT_SEARCH_LIMIT:-25}"
 playlist_limit="${YT_PLAYLIST_LIMIT:-30}"
 download_dir="${YT_DOWNLOAD_DIR:-$HOME/Music/youtube}"
@@ -24,6 +26,7 @@ require_mpv() {
 require_config() {
     [[ -r "$audio_options_file" ]] || die "не найден конфиг mpv: $audio_options_file"
     [[ -r "$video_options_file" ]] || die "не найден конфиг mpv: $video_options_file"
+    [[ -r "$input_options_file" ]] || die "не найден конфиг клавиш: $input_options_file"
 }
 
 require_bookmarks() {
@@ -59,7 +62,13 @@ usage() {
   Enter     выбрать, Esc — отмена
 
 Во время воспроизведения:
-  9 / 0     тише / громче
+  → / ←     вперёд / назад на 5 сек
+  Shift+→/← вперёд / назад на 30 сек
+  ↑ / ↓     вперёд / назад на 60 сек
+  0 … 9     перейти на 0 %, 10 % … 90 % длины
+  Home      в начало
+  t или g   ввести время: mm:ss, 1:02:03, 42%, +90, -90 (Enter, Esc — отмена)
+  / / *     тише / громче
   m         выключить или включить звук
   Space     пауза
   < / >     предыдущий / следующий трек
@@ -73,6 +82,8 @@ usage() {
   YT_VO                     видеовывод: kitty | sixel | tct (иначе автовыбор)
   YT_COOKIES_FROM_BROWSER   firefox | chromium | ... против «Sign in to confirm»
   YT_DOWNLOAD_DIR           куда качать (по умолчанию ~/Music/youtube)
+  YT_MPV_INPUT_CONFIG       свой файл клавиш (по умолчанию ~/.config/yt/mpv-input.conf)
+  YT_SEEK_SCRIPT            свой скрипт «перейти к» (yt_seek.lua)
 EOF
 }
 
@@ -150,6 +161,11 @@ detect_vo() {
 
 mpv_common_args() {
     printf '%s\n' "--script-opts=ytdl_hook-ytdl_path=$(command -v yt-dlp)"
+    printf '%s\n' "--input-conf=$input_options_file"
+    # The typed «перейти к» prompt. Optional: an older deployment may not have it.
+    if [[ -r "$seek_script_file" ]]; then
+        printf '%s\n' "--script=$seek_script_file"
+    fi
     if [[ -n "${YT_COOKIES_FROM_BROWSER:-}" ]]; then
         printf '%s\n' "--ytdl-raw-options=cookies-from-browser=$YT_COOKIES_FROM_BROWSER"
     fi

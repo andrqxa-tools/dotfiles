@@ -104,6 +104,9 @@ yt v <query|URL>               # video inside the terminal (kitty/sixel/tct)
 yt fav                         # play a bookmarked channel or playlist
 ```
 
+While playing: `←`/`→` seek ±5 s, `Shift` ±30 s, `↑`/`↓` ±60 s, `0`…`9` jump to
+0…90 % of the length, `t` types an exact position (`mm:ss`, `42%`, `+30`).
+
 Deploys only user files under `~/.local/bin` and `~/.config/yt`. See
 [`YouTube/README.md`](YouTube/README.md) for bookmarks, terminal-video backends
 and troubleshooting. For the full YouTube format list, add the Deno runtime

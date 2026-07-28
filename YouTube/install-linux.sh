@@ -22,6 +22,8 @@ pipx (the packaged yt-dlp is usually stale and breaks on YouTube), then deploys:
   ~/.config/yt/bookmarks.tsv      (never overwritten once it exists)
   ~/.config/yt/mpv-audio.conf
   ~/.config/yt/mpv-video.conf
+  ~/.config/yt/mpv-input.conf
+  ~/.config/yt/yt_seek.lua
 
 Options:
   --skip-packages  do not invoke the system package manager or pipx
@@ -130,10 +132,14 @@ mkdir -p "$BIN_DIR" "$YT_DIR"
 backup_if_changed "$SOURCE_DIR/yt" "$BIN_DIR/yt"
 backup_if_changed "$SOURCE_DIR/mpv-audio.conf" "$YT_DIR/mpv-audio.conf"
 backup_if_changed "$SOURCE_DIR/mpv-video.conf" "$YT_DIR/mpv-video.conf"
+backup_if_changed "$SOURCE_DIR/mpv-input.conf" "$YT_DIR/mpv-input.conf"
+backup_if_changed "$SOURCE_DIR/yt_seek.lua" "$YT_DIR/yt_seek.lua"
 
 install -m 0755 "$SOURCE_DIR/yt" "$BIN_DIR/yt"
 install -m 0644 "$SOURCE_DIR/mpv-audio.conf" "$YT_DIR/mpv-audio.conf"
 install -m 0644 "$SOURCE_DIR/mpv-video.conf" "$YT_DIR/mpv-video.conf"
+install -m 0644 "$SOURCE_DIR/mpv-input.conf" "$YT_DIR/mpv-input.conf"
+install -m 0644 "$SOURCE_DIR/yt_seek.lua" "$YT_DIR/yt_seek.lua"
 
 # Bookmarks are user data: seed them once, never clobber later edits.
 if [[ -e "$YT_DIR/bookmarks.tsv" ]]; then
