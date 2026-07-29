@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# mlimit — запуск важкої команди в окремому systemd-scope з жорстким лімітом памʼяті.
+#
+# Навіщо: `make lint` (custom-gcl/golangci-lint) на minitok.go доріс до 10.7G
+# і потягнув за собою всю сесію через systemd-oomd (2026-07-29).
+# У власному scope переліміт вбиває ЛИШЕ цю команду (memcg OOM), решта живе.
+#
+# Використання:
+#   mlimit make lint
+#   MLIMIT_MAX=6G mlimit go test ./...
+#
+# Змінні: MLIMIT_HIGH (мʼякий тиск), MLIMIT_MAX (жорсткий стеля), MLIMIT_SWAP.
+
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+	echo "usage: mlimit <команда> [аргументи...]" >&2
+	exit 2
+fi
+
+exec systemd-run --user --scope --quiet --collect \
+	--unit="mlimit-$$" \
+	-p MemoryHigh="${MLIMIT_HIGH:-8G}" \
+	-p MemoryMax="${MLIMIT_MAX:-10G}" \
+	-p MemorySwapMax="${MLIMIT_SWAP:-4G}" \
+	-p ManagedOOMPreference=avoid \
+	-- "$@"
