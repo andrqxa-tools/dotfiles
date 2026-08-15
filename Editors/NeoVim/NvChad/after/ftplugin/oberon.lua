@@ -1,4 +1,4 @@
--- minia2 Active Oberon language server (diagnostics over LSP).
+-- minia2 Active Oberon language server.
 -- Loaded automatically for oberon buffers; independent of NVChad.
 
 -- (a) show the FULL diagnostic text inline, on lines under the cursor's line.
@@ -11,33 +11,39 @@ vim.diagnostic.config({ virtual_lines = { current_line = true } })
 --     the flags line) to go back to on-open/on-save only.
 local dir = vim.fs.dirname(vim.api.nvim_buf_get_name(0)) or vim.fn.getcwd()
 
--- mount the file's directory at /work so the server can resolve (and build on demand)
--- the project's own modules, not just the standard library. Go-to-definition then
--- jumps within the file and into sibling project modules.
-local cmd = { "docker", "run", "--rm", "-i", "-v", dir .. ":/work:ro" }
-local init = {}
-
--- optional: point A2_STDLIB_SRC at a full A2 source tree, e.g.
---   export A2_STDLIB_SRC=$HOME/Projects/A2/a2oberon/source
--- so go-to-definition also reaches standard-library modules that aren't in the
--- current project. (When you're editing inside that tree already, every module is a
--- sibling in /work, so stdlib jumps work without this.)
 local stdlib = vim.env.A2_STDLIB_SRC
-if stdlib and stdlib ~= "" then
-  vim.list_extend(cmd, { "-v", stdlib .. ":/libsrc:ro" })
-  init.stdlibSrc = stdlib
-end
-
--- optional: the project's prebuilt symbol directory (its build output), e.g.
---   export A2_SYMS=$HOME/Projects/A2/a2oberon/target/Linux64/bin
--- imports then resolve from real build artifacts instead of fragile on-demand
--- compilation (and modules whose source is in a prefixed file resolve too).
 local syms = vim.env.A2_SYMS
-if syms and syms ~= "" then
-  vim.list_extend(cmd, { "-v", syms .. ":/psym:ro" })
+
+-- How the server is started. The tarball SDK is preferred over the image: it is the
+-- documented entrance, it starts in milliseconds instead of a container, and it is
+-- whatever you last installed -- an image built a day ago does not have what you
+-- added to the server today.
+--   $A2_OB   -- explicit path to the tarball SDK's ob
+--   ob       -- on PATH (sdk/install.sh puts it in ~/.local/bin)
+--   docker   -- fallback, the published image
+local cmd, init = nil, {}
+local ob = vim.env.A2_OB
+if (not ob or ob == "") and vim.fn.executable("ob") == 1 then
+  ob = vim.fn.exepath("ob")
 end
 
-vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
+if ob and ob ~= "" and vim.fn.executable(ob) == 1 then
+  -- native: the server reads the host paths itself, nothing to mount
+  cmd = { ob, "lsp", "--live" }
+  if stdlib and stdlib ~= "" then init.stdlibSrc = stdlib end
+else
+  -- the image: the file's directory is mounted at /work so the server can resolve
+  -- (and build on demand) the project's own modules, not just the standard library
+  cmd = { "docker", "run", "--rm", "-i", "-v", dir .. ":/work:ro" }
+  if stdlib and stdlib ~= "" then
+    vim.list_extend(cmd, { "-v", stdlib .. ":/libsrc:ro" })
+    init.stdlibSrc = stdlib
+  end
+  if syms and syms ~= "" then
+    vim.list_extend(cmd, { "-v", syms .. ":/psym:ro" })
+  end
+  vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
+end
 
 vim.lsp.start({
   name = "ob",
@@ -45,6 +51,28 @@ vim.lsp.start({
   root_dir = dir,
   init_options = init,
   flags = { debounce_text_changes = 500 },
+})
+
+-- (c) folding from the server: modules, procedures, records and objects, blocks,
+--     REPEAT/UNTIL, the IMPORT list and multi-line comments. Turned on only when the
+--     client says it can do it, so an older SDK (or the image) is left alone rather
+--     than folding everything into one line.
+vim.api.nvim_create_autocmd("LspAttach", {
+  buffer = 0,
+  callback = function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if not client or not client:supports_method("textDocument/foldingRange") then
+      return
+    end
+    local win = vim.api.nvim_get_current_win()
+    vim.wo[win][0].foldmethod = "expr"
+    vim.wo[win][0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+    -- a closed fold shows the first line it hides rather than a row of dashes
+    vim.wo[win][0].foldtext = "v:lua.vim.lsp.foldtext()"
+    -- open with everything unfolded; za / zc / zR / zM from there
+    vim.wo[win][0].foldlevel = 99
+    vim.wo[win][0].foldenable = true
+  end,
 })
 
 -- buffer-local LSP keymaps (guaranteed for .Mod even if the config manager's own
@@ -55,6 +83,16 @@ vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
 -- (also <C-]> via nvim's built-in LSP tagfunc)
 -- Ctrl-Click: move the cursor to the click position, then go to definition
 vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition()<CR>", o)
+
+-- Commands rather than mappings: zi, zC and the rest of the z-family already mean
+-- something in vim, and folding a kind is rare enough not to be worth taking one.
+vim.api.nvim_buf_create_user_command(0, "ObFoldImports", function()
+  vim.lsp.foldclose("imports", vim.api.nvim_get_current_win())
+end, { desc = "Oberon: close the IMPORT folds" })
+
+vim.api.nvim_buf_create_user_command(0, "ObFoldComments", function()
+  vim.lsp.foldclose("comment", vim.api.nvim_get_current_win())
+end, { desc = "Oberon: close the comment folds" })
 
 -- g0: module outline (document symbols). Telescope picker if available, else loclist.
 vim.keymap.set("n", "g0", function()
