@@ -45,7 +45,32 @@ else
   vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
 end
 
-vim.lsp.start({
+-- (c) folding from the server: procedures, records and objects, blocks, REPEAT/UNTIL,
+--     the IMPORT list and multi-line comments. Turned on only when the client says it
+--     can do it, so an older SDK (or the image) is left alone.
+local function fold_here(client)
+  if not client or not client:supports_method("textDocument/foldingRange") then return end
+  local win = vim.api.nvim_get_current_win()
+  vim.wo[win][0].foldmethod = "expr"
+  vim.wo[win][0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+  -- a closed fold shows the first line it hides rather than a row of dashes
+  vim.wo[win][0].foldtext = "v:lua.vim.lsp.foldtext()"
+  -- open with everything unfolded; za / zc / zR / zM from there
+  vim.wo[win][0].foldlevel = 99
+  vim.wo[win][0].foldenable = true
+end
+
+-- registered BEFORE the client starts: when the server is already running (any .Mod
+-- opened after the first) vim.lsp.start attaches synchronously, and an autocommand
+-- created after it would never see the event.
+vim.api.nvim_create_autocmd("LspAttach", {
+  buffer = 0,
+  callback = function(ev)
+    fold_here(vim.lsp.get_client_by_id(ev.data.client_id))
+  end,
+})
+
+local id = vim.lsp.start({
   name = "ob",
   cmd = cmd,
   root_dir = dir,
@@ -53,27 +78,8 @@ vim.lsp.start({
   flags = { debounce_text_changes = 500 },
 })
 
--- (c) folding from the server: modules, procedures, records and objects, blocks,
---     REPEAT/UNTIL, the IMPORT list and multi-line comments. Turned on only when the
---     client says it can do it, so an older SDK (or the image) is left alone rather
---     than folding everything into one line.
-vim.api.nvim_create_autocmd("LspAttach", {
-  buffer = 0,
-  callback = function(ev)
-    local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if not client or not client:supports_method("textDocument/foldingRange") then
-      return
-    end
-    local win = vim.api.nvim_get_current_win()
-    vim.wo[win][0].foldmethod = "expr"
-    vim.wo[win][0].foldexpr = "v:lua.vim.lsp.foldexpr()"
-    -- a closed fold shows the first line it hides rather than a row of dashes
-    vim.wo[win][0].foldtext = "v:lua.vim.lsp.foldtext()"
-    -- open with everything unfolded; za / zc / zR / zM from there
-    vim.wo[win][0].foldlevel = 99
-    vim.wo[win][0].foldenable = true
-  end,
-})
+-- and if it was already attached before the autocommand existed at all
+if id then fold_here(vim.lsp.get_client_by_id(id)) end
 
 -- buffer-local LSP keymaps (guaranteed for .Mod even if the config manager's own
 -- LSP maps don't attach to this client)
