@@ -95,17 +95,28 @@ vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
 --     heard of, so without these two lines the server's answer is simply invisible.
 --     Set once, not per buffer: a highlight group is global. :Inspect on a word says which
 --     groups it got, which is how to tell "not coloured" from "not sent".
+--
+--     On the colours: a foreground red does NOT work here. This theme spends #e06c75 on
+--     Statement and Identifier -- and therefore on IMPORT, CONST, VAR and every plain
+--     identifier -- so a red SYSTEM lands in the middle of a page that is already red and
+--     marks nothing. What it needs is the axis the palette leaves free, and that is the
+--     background: #e06c75 red, #c678dd purple, #e5c07b yellow, #98c379 green and #61afef
+--     blue are all taken, backgrounds are not. So `dangerous` is a dark maroon wash under
+--     a near-white word, which also says the right thing -- it marks a REGION where the
+--     language stopped being checked, not a word that happens to be a keyword. `checks` is
+--     cyan, the one hue nothing else in this theme uses.
+local function oberon_token_colours()
+  vim.api.nvim_set_hl(0, "@lsp.mod.dangerous.oberon", { fg = "#ffd9d0", bg = "#5c1f26", bold = true })
+  vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#2bbac5", bold = true })
+end
+
 if not vim.g.oberon_token_hl then
   vim.g.oberon_token_hl = true
-  vim.api.nvim_set_hl(0, "@lsp.mod.dangerous.oberon", { fg = "#ff6b6b", bold = true })
-  vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#e2b56d" })
+  oberon_token_colours()
   -- a colourscheme change clears highlight groups, so put them back after one
   vim.api.nvim_create_autocmd("ColorScheme", {
     group = vim.api.nvim_create_augroup("OberonTokenHl", { clear = true }),
-    callback = function()
-      vim.api.nvim_set_hl(0, "@lsp.mod.dangerous.oberon", { fg = "#ff6b6b", bold = true })
-      vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#e2b56d" })
-    end,
+    callback = oberon_token_colours,
   })
 end
 
