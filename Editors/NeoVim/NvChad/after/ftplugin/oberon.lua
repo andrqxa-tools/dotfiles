@@ -87,6 +87,28 @@ local o = { buffer = true, silent = true }
 vim.keymap.set("n", "K",  vim.lsp.buf.hover, o)       -- hover: type + doc
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
 -- (also <C-]> via nvim's built-in LSP tagfunc)
+-- (d) the two semantic-token modifiers the server sends: `dangerous` for everything of
+--     SYSTEM (GET, PUT, MOVE, VAL, ADR, the registers) and for HALT, UNTRACED, UNTRACKED,
+--     UNCHECKED, UNCOOPERATIVE, UNSAFE; `checks` for ASSERT. What they mark is where the
+--     program stops being a checked program, which is the one thing A2's own editor
+--     colours that is worth having here. Neovim has no default for a modifier it has not
+--     heard of, so without these two lines the server's answer is simply invisible.
+--     Set once, not per buffer: a highlight group is global. :Inspect on a word says which
+--     groups it got, which is how to tell "not coloured" from "not sent".
+if not vim.g.oberon_token_hl then
+  vim.g.oberon_token_hl = true
+  vim.api.nvim_set_hl(0, "@lsp.mod.dangerous.oberon", { fg = "#ff6b6b", bold = true })
+  vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#e2b56d" })
+  -- a colourscheme change clears highlight groups, so put them back after one
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = vim.api.nvim_create_augroup("OberonTokenHl", { clear = true }),
+    callback = function()
+      vim.api.nvim_set_hl(0, "@lsp.mod.dangerous.oberon", { fg = "#ff6b6b", bold = true })
+      vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#e2b56d" })
+    end,
+  })
+end
+
 -- Ctrl-Click: move the cursor to the click position, then go to definition
 vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition()<CR>", o)
 
@@ -109,6 +131,18 @@ vim.keymap.set("n", "g0", function()
     vim.lsp.buf.document_symbol()
   end
 end, { buffer = true, silent = true, desc = "Oberon: outline (document symbols)" })  -- g0
+
+-- gO: the outline as a side panel, which is what PET's Program Structure panel is. g0 above
+-- goes through Telescope, and a picker flattens the tree and sorts it by name -- so the
+-- IMPORT group, the nesting and the source order the server took trouble to send are only
+-- visible here. Falls back to g0's behaviour if the plugin is not installed.
+vim.keymap.set("n", "gO", function()
+  if pcall(require, "outline") then
+    vim.cmd "Outline!"  -- ! keeps the cursor in the code window
+  else
+    vim.lsp.buf.document_symbol()
+  end
+end, { buffer = true, silent = true, desc = "Oberon: outline panel" })
 
 -- gr: find references (Telescope picker if available, else quickfix). Project-wide
 -- for module-level symbols — can take a few seconds on a large tree.

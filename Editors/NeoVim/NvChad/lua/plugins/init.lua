@@ -107,6 +107,22 @@ return {
     opts = {},
   },
 
+  -- ── Module outline in a side panel (Active Oberon: what PET's Program
+  --    Structure panel shows). The LSP sends the tree in SOURCE order with
+  --    an `IMPORT (n)` group and a `*` on what the module exports; a
+  --    Telescope picker flattens and sorts that away, a panel keeps it.
+  --    Not filtered by kind on purpose: constants, variables and record
+  --    fields are exactly what one looks for in an Oberon module. ─────
+  {
+    "hedyhli/outline.nvim",
+    cmd = { "Outline", "OutlineOpen" },
+    opts = {
+      outline_window = { width = 30, relative_width = false, auto_close = false },
+      outline_items = { show_symbol_details = false },
+      symbol_folding = { autofold_depth = false },
+    },
+  },
+
   -- ── Seamless nvim <-> tmux/psmux pane navigation ──────────────────
   {
     "christoomey/vim-tmux-navigator",
