@@ -110,15 +110,14 @@ local function oberon_token_colours()
   vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#2bbac5", bold = true })
 end
 
-if not vim.g.oberon_token_hl then
-  vim.g.oberon_token_hl = true
-  oberon_token_colours()
-  -- a colourscheme change clears highlight groups, so put them back after one
-  vim.api.nvim_create_autocmd("ColorScheme", {
-    group = vim.api.nvim_create_augroup("OberonTokenHl", { clear = true }),
-    callback = oberon_token_colours,
-  })
-end
+--     Set on every .Mod that opens, not once behind a flag: nvim_set_hl is cheap, and a flag
+--     meant that editing these two lines did nothing until the whole editor was restarted.
+oberon_token_colours()
+-- a colourscheme change clears highlight groups, so put them back after one
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("OberonTokenHl", { clear = true }),
+  callback = oberon_token_colours,
+})
 
 -- Ctrl-Click: move the cursor to the click position, then go to definition
 vim.keymap.set("n", "<C-LeftMouse>", "<LeftMouse><Cmd>lua vim.lsp.buf.definition()<CR>", o)
@@ -142,6 +141,28 @@ vim.keymap.set("n", "g0", function()
     vim.lsp.buf.document_symbol()
   end
 end, { buffer = true, silent = true, desc = "Oberon: outline (document symbols)" })  -- g0
+
+-- :ObRestart -- stop the server and let it come back on the next attach. There is no
+-- :LspRestart to reach for: nvim-lspconfig 2.x dropped its Lsp* commands, and this client is
+-- started by this file with vim.lsp.start rather than by lspconfig, so nothing would register
+-- one anyway. Needed after `task update` puts a new `ob` in place; NOT needed for a colour
+-- change, which is client-side and takes effect on :e.
+vim.api.nvim_buf_create_user_command(0, "ObRestart", function()
+  local bufs = {}
+  for _, c in ipairs(vim.lsp.get_clients { name = "ob" }) do
+    for b in pairs(c.attached_buffers or {}) do
+      if vim.api.nvim_buf_is_loaded(b) then bufs[#bufs + 1] = b end
+    end
+    c:stop(true)   -- vim.lsp.stop_client is deprecated in 0.12
+  end
+  -- re-running the ftplugin is what starts the client again
+  vim.schedule(function()
+    for _, b in ipairs(#bufs > 0 and bufs or { vim.api.nvim_get_current_buf() }) do
+      vim.api.nvim_buf_call(b, function() vim.cmd "edit" end)
+    end
+    vim.notify("ob: server restarted", vim.log.levels.INFO)
+  end)
+end, { desc = "Oberon: restart the language server" })
 
 -- gO: the outline as a side panel, which is what PET's Program Structure panel is. g0 above
 -- goes through Telescope, and a picker flattens the tree and sorts it by name -- so the
