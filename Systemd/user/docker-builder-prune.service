@@ -1,0 +1,22 @@
+[Unit]
+Description=Prune Docker build cache to a size cap and drop stale images
+Documentation=https://docs.docker.com/reference/cli/docker/builder/prune/
+Documentation=https://docs.docker.com/reference/cli/docker/image/prune/
+
+[Service]
+Type=oneshot
+
+# Тихо выйти, если демон не поднят — иначе таймер плодит failed-юниты.
+ExecCondition=/bin/sh -c 'docker info >/dev/null 2>&1'
+
+ExecStartPre=/bin/sh -c 'echo "before: $(df -h --output=avail / | tail -1 | tr -d " ") free on /"'
+
+# --max-used-space вместо -a: горячий кэш остаётся, вытесняется только самое старое
+# сверх лимита.
+ExecStart=/usr/bin/docker builder prune -f --max-used-space 10GB
+
+# Образы копятся отдельно от build cache и до 2026-08-22 не чистились ничем:
+# 10.5G, из них 9.2G dangling. until=168h щадит то, что реально в работе.
+ExecStart=/usr/bin/docker image prune -a -f --filter until=168h
+
+ExecStartPost=/bin/sh -c 'echo "after:  $(df -h --output=avail / | tail -1 | tr -d " ") free on /"'

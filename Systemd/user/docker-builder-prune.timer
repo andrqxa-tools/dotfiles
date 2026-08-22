@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Docker build cache + stale image prune
+
+[Timer]
+OnCalendar=Mon 12:00
+# Догнать пропущенный запуск при следующем входе, если машина была выключена.
+Persistent=true
+RandomizedDelaySec=30m
+
+[Install]
+WantedBy=timers.target
