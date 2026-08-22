@@ -131,6 +131,7 @@ single video.
 | `YT_SHUFFLE=1` | shuffle the playlist |
 | `YT_VO` | force `kitty`, `sixel` or `tct` |
 | `YT_COOKIES_FROM_BROWSER` | `firefox`, `chromium`, … — see below |
+| `YT_REMOTE_COMPONENTS` | yt-dlp JS challenge solver (default `ejs:github`; set empty to disable) |
 | `YT_DOWNLOAD_DIR` | download target (default `~/Music/youtube`) |
 | `YT_CONFIG_DIR` | config dir (default `~/.config/yt`) |
 | `YT_BOOKMARKS_FILE`, `YT_MPV_AUDIO_CONFIG`, `YT_MPV_VIDEO_CONFIG`, `YT_MPV_INPUT_CONFIG`, `YT_SEEK_SCRIPT` | override single paths |
@@ -139,7 +140,12 @@ single video.
 
 - **`Sign in to confirm you're not a bot`** — export
   `YT_COOKIES_FROM_BROWSER=firefox` (or `chromium`); it is passed on to `yt-dlp`
-  for both playback and downloads.
+  for search, playback and downloads.
+  This repository also includes an optional persistent setting in
+  [`../Shell/profile.d/youtube.sh`](../Shell/profile.d/youtube.sh).
+- **`Only images are available` / `n challenge solving failed`** — the script
+  enables yt-dlp's recommended `ejs:github` challenge solver by default. Deno
+  must also be installed; use [`../Deno/deno-install.sh`](../Deno/deno-install.sh).
 - **`Requested format is not available`** — a stale `yt-dlp`. Run `yt update`,
   or install it with `pipx` if it came from the distro package.
 - **`No supported JavaScript runtime could be found`** — a `yt-dlp` warning;
