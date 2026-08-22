@@ -40,6 +40,7 @@ GO_HOME=/opt/programming     # parent dir for the toolchain
 GOROOT="$GO_HOME/go"
 GOPATH="$HOME/go"
 GOCACHE="$HOME/.cache/go-build"
+GOTMPDIR="/data/$(id -un)/tmp"
 OWNER="$(id -un):$(id -gn)"
 
 ENV_DIR="$HOME/.config/profile.d"
@@ -70,7 +71,7 @@ echo "Setting ownership of $GO_HOME to $OWNER..."
 run_root chown -R "$OWNER" "$GO_HOME"
 
 # --- create GOPATH layout -----------------------------------------------
-mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" "$GOCACHE"
+mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" "$GOCACHE" "$GOTMPDIR"
 
 # --- write the POSIX environment file (regenerated, never appended) -----
 echo "Writing environment to $ENV_FILE..."
@@ -80,6 +81,7 @@ cat > "$ENV_FILE" <<EOF
 export GOROOT=$GOROOT
 export GOPATH="\$HOME/go"
 export GOMODCACHE="\$GOPATH/pkg/mod"
+export GOTMPDIR=$GOTMPDIR
 export GOCACHE="\$HOME/.cache/go-build"
 export PATH="\$GOROOT/bin:\$GOPATH/bin:\$PATH"
 
@@ -141,6 +143,7 @@ set -gx GOROOT /opt/programming/go
 set -gx GOPATH $HOME/go
 set -gx GOMODCACHE $GOPATH/pkg/mod
 set -gx GOCACHE $HOME/.cache/go-build
+set -gx GOTMPDIR /data/(id -un)/tmp
 fish_add_path $GOROOT/bin $GOPATH/bin
 EOF
   echo "  wrote $fish_dir/go.fish"
