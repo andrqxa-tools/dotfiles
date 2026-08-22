@@ -191,5 +191,14 @@ end, { buffer = true, silent = true, desc = "Oberon: find references" })
 -- <leader>rr / <leader>rb: compile and run, or just compile. `ob` finds its own runtime, so
 -- no A2SDK here. No errorformat/quickfix on purpose — the server already reports compile
 -- errors in the buffer, and a second channel for the same diagnostics is noise.
-vim.keymap.set("n", "<leader>rr", "<Cmd>!ob run %<CR>", { buffer = true, desc = "Oberon: run this module" })
-vim.keymap.set("n", "<leader>rb", "<Cmd>!ob build % -o /tmp/%:t:r<CR>", { buffer = true, desc = "Oberon: build to /tmp" })
+--
+-- The same `ob` the server above resolved ($A2_OB, else PATH), and $TMPDIR before /tmp: on a
+-- phone under Termux there is no `ob` on PATH and no /tmp at all, so a mapping that spelled both
+-- out did nothing and said nothing about why.
+local obrun = (ob and ob ~= "" and vim.fn.shellescape(ob)) or "ob"
+local obtmp = vim.env.TMPDIR
+if not obtmp or obtmp == "" then obtmp = "/tmp" end
+vim.keymap.set("n", "<leader>rr", "<Cmd>!" .. obrun .. " run %<CR>",
+  { buffer = true, desc = "Oberon: run this module" })
+vim.keymap.set("n", "<leader>rb", "<Cmd>!" .. obrun .. " build % -o " .. obtmp .. "/%:t:r<CR>",
+  { buffer = true, desc = "Oberon: build to $TMPDIR" })
