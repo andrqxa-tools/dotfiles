@@ -187,3 +187,9 @@ vim.keymap.set("n", "gr", function()
   end
 end, { buffer = true, silent = true, desc = "Oberon: find references" })
 -- rename is NVChad's existing <leader>ra (vim.lsp.buf.rename) — attaches to our client too
+
+-- <leader>rr / <leader>rb: compile and run, or just compile. `ob` finds its own runtime, so
+-- no A2SDK here. No errorformat/quickfix on purpose — the server already reports compile
+-- errors in the buffer, and a second channel for the same diagnostics is noise.
+vim.keymap.set("n", "<leader>rr", "<Cmd>!ob run %<CR>", { buffer = true, desc = "Oberon: run this module" })
+vim.keymap.set("n", "<leader>rb", "<Cmd>!ob build % -o /tmp/%:t:r<CR>", { buffer = true, desc = "Oberon: build to /tmp" })
