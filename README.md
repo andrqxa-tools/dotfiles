@@ -28,6 +28,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Flutter/` | Android SDK + JDK17 + FVM/Flutter installer for the mabrook projects (SDK on `/data`) |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
+| `Shell/bashrc` | minimal fallback bash config — zsh is the daily driver |
 | `Shell/zsh/` | zsh setup — oh-my-zsh + powerlevel10k, aliases, functions, key bindings; `install.sh` clones the third-party parts |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
 | `Radio/` | Console internet radio for mpv with a genre-based station catalog |
