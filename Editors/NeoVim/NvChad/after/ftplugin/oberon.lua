@@ -31,6 +31,16 @@ if ob and ob ~= "" and vim.fn.executable(ob) == 1 then
   -- native: the server reads the host paths itself, nothing to mount
   cmd = { ob, "lsp", "--live" }
   if stdlib and stdlib ~= "" then init.stdlibSrc = stdlib end
+elseif vim.fn.executable("docker") == 0 then
+  -- No ob and no docker: say which, because the alternative is nvim reporting that a
+  -- container runtime is missing on a phone, which sends the reader after the wrong thing.
+  -- Seen for real: $A2_OB held a path with a typo, so `ob` was "not executable" and the
+  -- error that surfaced was about docker.
+  vim.notify(
+    ("A2: no language server. $A2_OB = %s, and no `ob` on PATH."):format(
+      (ob and ob ~= "") and ob or "(unset)"),
+    vim.log.levels.WARN)
+  cmd = nil
 else
   -- the image: the file's directory is mounted at /work so the server can resolve
   -- (and build on demand) the project's own modules, not just the standard library
@@ -70,7 +80,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
-local id = vim.lsp.start({
+local id = cmd and vim.lsp.start({
   name = "ob",
   cmd = cmd,
   root_dir = dir,
