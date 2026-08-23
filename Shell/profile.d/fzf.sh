@@ -2,7 +2,8 @@
 # Debian/Ubuntu fzf (0.44) predates `fzf --bash`, so keybindings are sourced
 # from the packaged example file; tab-completion is auto-loaded by
 # bash-completion from /usr/share/bash-completion/completions/fzf.
-[ -r /usr/share/doc/fzf/examples/key-bindings.bash ] && . /usr/share/doc/fzf/examples/key-bindings.bash
+# Bash only: zsh gets its bindings from `fzf --zsh` in Shell/zsh/zshrc.
+[ -n "$BASH_VERSION" ] && [ -r /usr/share/doc/fzf/examples/key-bindings.bash ] && . /usr/share/doc/fzf/examples/key-bindings.bash
 
 # Candidates via fd (Ubuntu ships the binary as fdfind): faster than find,
 # respects .gitignore, shows hidden files except .git itself.

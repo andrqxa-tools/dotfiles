@@ -73,10 +73,18 @@ ln -sf "$PWD/Shell/profile.d/flutter.sh" ~/.config/profile.d/flutter.sh
 # zsh (Linux/Termux) — clones oh-my-zsh, powerlevel10k and the plugins, links ~/.zshrc
 ./Shell/zsh/install.sh
 chsh -s zsh            # Termux; elsewhere: chsh -s "$(command -v zsh)"
+
+# Active Oberon SDK env (A2_OB / A2_SYMS). Install the SDK itself with:
+#   curl -fsSL https://raw.githubusercontent.com/active-oberon/minia2/main/sdk/install.sh | sh
+ln -sf "$PWD/Shell/profile.d/a2.sh" ~/.config/profile.d/a2.sh
 ```
 
-Machine-local settings (paths that exist on one box only) go to
-`~/.config/shell/local.sh`, which `zshrc` sources last and this repo ignores.
+Three levels, no per-platform copies of the config: shared shell setup lives in
+`Shell/zsh/` (one file per concern, platform differences behind `$TERMUX_VERSION`
+and `command -v` guards); per-topic env goes to `Shell/profile.d/*.sh`, symlinked
+into `~/.config/profile.d/` only on the machines that need it and loaded by both
+bash and zsh; whatever exists on a single box goes to `~/.config/shell/local.sh`,
+sourced last and ignored by this repo.
 
 VS Code extensions are managed by built-in Settings Sync, not tracked here.
 

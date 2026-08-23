@@ -89,11 +89,11 @@ if [[ -n $TERMUX_VERSION ]]; then
     alias pks="pkg search"
     alias pkr="pkg uninstall"
     alias pku="pkg upgrade"
-elif (( $+commands[dnf] )); then
-    alias pki="sudo dnf install"
-    alias pks="dnf search"
-    alias pkr="sudo dnf remove"
-    alias pku="sudo dnf upgrade"
+elif (( $+commands[apt] )); then
+    alias pki="sudo apt install"
+    alias pks="apt search"
+    alias pkr="sudo apt remove"
+    alias pku="sudo apt update && sudo apt upgrade"
 fi
 
 # zsh-only sugar

@@ -119,4 +119,9 @@ source "$ZSH_CONF/keys.zsh"
 source "$ZSH_CONF/aliases.zsh"
 source "$ZSH_CONF/functions.zsh"
 
+# Per-topic env files, same directory the bash side loads: link only what this box needs.
+if [[ -d ~/.config/profile.d ]]; then
+    for f in ~/.config/profile.d/*.sh(N); do source $f; done
+fi
+
 [[ -f ~/.config/shell/local.sh ]] && source ~/.config/shell/local.sh
