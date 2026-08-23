@@ -5,7 +5,9 @@ alias ..="cd ../"
 alias ...="cd ../../"
 alias ....="cd ../../../"
 alias .....="cd ../../../../"
-alias cat="bat"
+# Debian/Ubuntu name the binary batcat; alias it back and leave cat alone if neither is here.
+(( $+commands[bat] )) || { (( $+commands[batcat] )) && alias bat="batcat" }
+(( $+commands[bat] + $+commands[batcat] )) && alias cat="bat"
 alias cp="cp -irv"
 alias mv="mv -iv"
 alias rm="rm -irv"

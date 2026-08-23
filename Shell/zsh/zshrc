@@ -110,7 +110,13 @@ zstyle ':fzf-tab:complete:git-checkout:*' fzf-preview \
     *) git log --color=always $word ;;
     esac'
 
-(( $+commands[fzf] ))    && eval "$(fzf --zsh)"
+# fzf prints its shell integration since 0.48; Debian's 0.44 only ships the files.
+if (( $+commands[fzf] )); then
+	if _fzf_init=$(fzf --zsh 2>/dev/null); then eval "$_fzf_init"
+	else for f in /usr/share/doc/fzf/examples/{key-bindings,completion}.zsh; do [[ -r $f ]] && source $f; done
+	fi
+	unset _fzf_init f
+fi
 (( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 (( $+commands[mise] ))   && eval "$(mise activate zsh)"
 autoload -Uz compinit && compinit
