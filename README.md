@@ -28,6 +28,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Flutter/` | Android SDK + JDK17 + FVM/Flutter installer for the mabrook projects (SDK on `/data`) |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
+| `A2/` | Active Oberon SDK (minia2) installers — Linux/Termux wrapper and a Windows one |
 | `Shell/bashrc` | minimal fallback bash config — zsh is the daily driver |
 | `Shell/zsh/` | zsh setup — oh-my-zsh + powerlevel10k, aliases, functions, key bindings; `install.sh` clones the third-party parts |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
@@ -99,6 +100,19 @@ VS Code extensions are managed by built-in Settings Sync, not tracked here.
 ```powershell
 .\Fonts\install-windows.ps1   # Windows (per-user font dir)
 ```
+
+### A2 (Active Oberon SDK)
+
+```sh
+./A2/install-unix.sh          # Linux and Termux; flags pass through to minia2 sdk/install.sh
+```
+```powershell
+.\A2\install-windows.ps1     # Windows: ob.exe SDK, per-user PATH and A2_* variables
+```
+
+Unpacks the release tarball into `~/.local/share/a2sdk` (`--dir` overrides), links
+`Shell/profile.d/a2.sh` so `A2_OB` and `A2_SYMS` are set in every new shell, and asks
+for no privileges. `--uninstall` removes what it installed.
 
 ### Radio (mpv)
 
