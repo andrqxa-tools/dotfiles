@@ -64,8 +64,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 [[ $TERM == linux ]] && ZSH_THEME="ys"        # no nerd font on a bare console
 
 plugins=(
+    # no globalias: it binds SPACE and expands  and globs in place
     alias-tips colorize dirhistory docker docker-compose extract F-Sy-H
-    fancy-ctrl-z fzf-tab gh git git-extra-commands globalias magic-enter timer
+    fancy-ctrl-z fzf-tab gh git git-extra-commands magic-enter timer
     tmux vi-mode web-search zsh-autopair zsh-autosuggestions zsh-completions
     zsh-navigation-tools
 )
