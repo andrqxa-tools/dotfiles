@@ -45,6 +45,7 @@ alias gcma="git commit --amend -m"
 alias gcman="git commit --amend --no-edit"
 alias gcmn="git add . && git commit --amend --no-edit"
 alias gcm='git checkout $(git_main_branch)'
+alias gg="lazygit"
 alias gtop='cd "$(git rev-parse --show-toplevel)"'
 alias gbrr="git for-each-ref --count=30 --sort=-committerdate refs/heads/ --format='%(refname:short)'"
 

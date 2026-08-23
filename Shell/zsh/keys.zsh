@@ -1,4 +1,4 @@
-# keys.zsh — key bindings. Dead ones (lazygit, tdo, tea, dexe) dropped with their tools.
+# keys.zsh — key bindings. Bindings for tools I do not have (tdo, tea, dexe) dropped.
 autoload -U up-line-or-beginning-search down-line-or-beginning-search
 autoload -Uz copy-earlier-word edit-command-line
 zle -N up-line-or-beginning-search
@@ -32,6 +32,7 @@ bindkey "^q" quote-word
 bindkey "^u" undo
 bindkey "^x^v" vi-cmd-mode
 bindkey "^x^x" exchange-point-and-mark
+bindkey -s "^g" " lazygit^M"
 bindkey -s "^h" ' exec zsh^M'
 
 if [[ -n $CLIPCOPY ]]; then
