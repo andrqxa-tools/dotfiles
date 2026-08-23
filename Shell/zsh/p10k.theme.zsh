@@ -92,3 +92,7 @@ POWERLEVEL9K_ASDF_SHOW_SYSTEM=false
 # Personal: green OS icon and a green prompt arrow.
 POWERLEVEL9K_OS_ICON_BACKGROUND='040'
 POWERLEVEL9K_MULTILINE_LAST_PROMPT_PREFIX='%F{238}╰%F{040}%K{040}%F{black} 󰅂%f%F{040}%k%f'
+
+# Termux is Bionic: the gitstatusd shipped with p10k is a glibc binary and cannot start
+# here, so read git state the plain way instead of warning at every prompt.
+[[ -n $TERMUX_VERSION ]] && POWERLEVEL9K_DISABLE_GITSTATUS=true
