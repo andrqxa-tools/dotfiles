@@ -2,7 +2,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/active-oberon/minia2/main/sdk/install.sh | sh
 # Editors and the language server read A2_OB and A2_SYMS — see minia2 docs/IDE.md.
 
-for _a2 in "$A2_HOME" "$HOME/.local/share/a2sdk" "$HOME/Projects/a2-a64" /data/Projects/A2/minia2; do
+for _a2 in "$A2_HOME" "$HOME/.local/share/a2sdk" "$HOME/Projects/a2-a64" /data/Projects/A2/minia2/target/bundle; do
     if [ -n "$_a2" ] && [ -x "$_a2/ob" ]; then A2_HOME="$_a2"; break; fi
 done
 unset _a2
