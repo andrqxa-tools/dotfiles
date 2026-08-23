@@ -28,6 +28,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `Flutter/` | Android SDK + JDK17 + FVM/Flutter installer for the mabrook projects (SDK on `/data`) |
 | `Gitignore/go/` | Reusable Go `.gitignore` |
 | `IDE/IntelliJ-IDEA/` | `idea64.vmoptions` — JVM tuning (Go profile, 4 GB heap) |
+| `Shell/zsh/` | zsh setup — oh-my-zsh + powerlevel10k, aliases, functions, key bindings; `install.sh` clones the third-party parts |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
 | `Radio/` | Console internet radio for mpv with a genre-based station catalog |
 | `YouTube/` | Console YouTube for mpv + yt-dlp — search, audio, terminal video, bookmarks |
@@ -66,6 +67,15 @@ ln -sf "$PWD/Shell/profile.d/flutter.sh" ~/.config/profile.d/flutter.sh
 # then run the installer for the SDK/JDK/FVM (see Flutter/README.md):
 #   ./Flutter/setup-android-env.sh --emulator
 ```
+
+```sh
+# zsh (Linux/Termux) — clones oh-my-zsh, powerlevel10k and the plugins, links ~/.zshrc
+./Shell/zsh/install.sh
+chsh -s zsh            # Termux; elsewhere: chsh -s "$(command -v zsh)"
+```
+
+Machine-local settings (paths that exist on one box only) go to
+`~/.config/shell/local.sh`, which `zshrc` sources last and this repo ignores.
 
 VS Code extensions are managed by built-in Settings Sync, not tracked here.
 

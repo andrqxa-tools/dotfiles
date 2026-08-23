@@ -1,0 +1,122 @@
+# zshrc — the only entry point; symlinked as ~/.zshrc, sourced files live next to it.
+# Personal, machine-local settings belong in ~/.config/shell/local.sh (not in this repo).
+
+# Powerlevel10k instant prompt must stay first — before anything that writes to stdout.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+    source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Directory of this file with symlinks resolved — the repo checkout, wherever it sits.
+ZSH_CONF="${${(%):-%x}:A:h}"
+
+# ---------------------------------------------------------------- environment
+export EDITOR=nvim
+export VISUAL=nvim
+export LANG=${LANG:-en_US.UTF-8}
+
+path=($HOME/.local/bin $HOME/.go/bin $HOME/.cargo/bin $HOME/.npm/bin $HOME/.luarocks/bin $path)
+export GOPATH=$HOME/.go
+export GOBIN=$GOPATH/bin
+typeset -U path PATH          # zsh keeps the array unique: no doubling on re-login
+
+# Clipboard: Termux, Wayland, X11 — whichever exists.
+if (( $+commands[termux-clipboard-set] )); then
+    export CLIPCOPY=termux-clipboard-set CLIPPASTE=termux-clipboard-get
+elif (( $+commands[wl-copy] )); then
+    export CLIPCOPY=wl-copy CLIPPASTE=wl-paste
+elif (( $+commands[xclip] )); then
+    export CLIPCOPY='xclip -selection clipboard' CLIPPASTE='xclip -selection clipboard -o'
+fi
+
+export FZF_DEFAULT_COMMAND='fd --hidden --follow --exclude=.git --exclude=node_modules'
+export FZF_CTRL_T_COMMAND='fd -t f -HF -E=.git -E=node_modules'
+export FZF_COMPLETION_TRIGGER=','
+export FZF_TMUX_OPTS='-p 90%'
+export FZF_DEFAULT_OPTS="
+--layout=reverse --info=inline --height=80% --multi --cycle --margin=1 --border=rounded
+--preview '([[ -f {} ]] && (bat --style=numbers --color=always --line-range=:500 {} || cat {})) || ([[ -d {} ]] \
+&& (eza -ahlT -L=2 -s=extension --group-directories-first --icons --git --git-ignore --no-user {} | less)) || echo {} 2> /dev/null | head -200'
+--prompt=' ' --pointer=' ' --marker=' '
+--color='hl:148,hl+:154,prompt:blue,pointer:032,marker:010,bg+:000,gutter:000'
+--preview-window=right:65%
+--bind '?:toggle-preview'
+--bind 'ctrl-a:select-all'
+--bind 'ctrl-e:execute(\$EDITOR {+})+reload(fzf)'"
+
+# --------------------------------------------------------------------- options
+setopt append_history hist_expire_dups_first hist_find_no_dups hist_ignore_all_dups
+setopt hist_ignore_dups hist_ignore_space hist_save_no_dups share_history
+setopt auto_cd extended_glob glob_dots interactive_comments menu_complete nomatch
+unsetopt beep
+HISTFILE=$HOME/.zsh_history
+HISTSIZE=99999
+SAVEHIST=99999
+autoload -U zmv
+
+# ------------------------------------------------------------- prompt + oh-my-zsh
+# p10k config is read before the theme loads.
+source "$ZSH_CONF/p10k.zsh"
+source "$ZSH_CONF/p10k.theme.zsh"
+
+export ZSH="$HOME/.local/share/oh-my-zsh"
+zstyle ':omz:update' mode disabled   # a plain clone, updated by install.sh — no y/n prompt at login
+ZSH_THEME="powerlevel10k/powerlevel10k"
+[[ $TERM == linux ]] && ZSH_THEME="ys"        # no nerd font on a bare console
+
+plugins=(
+    alias-tips colorize dirhistory docker docker-compose extract F-Sy-H
+    fancy-ctrl-z fzf-tab gh git git-extra-commands globalias magic-enter timer
+    tmux vi-mode web-search zsh-autopair zsh-autosuggestions zsh-completions
+    zsh-navigation-tools
+)
+DISABLE_AUTO_TITLE="false"
+ENABLE_CORRECTION="false"
+COMPLETION_WAITING_DOTS="false"
+MAGIC_ENTER_GIT_COMMAND="gsd"
+MAGIC_ENTER_OTHER_COMMAND="la"
+ZSH_COLORIZE_STYLE="dracula"
+TIMER_THRESHOLD=1
+ZSH_TMUX_AUTOSTART='false'
+[[ -d $ZSH ]] && source "$ZSH/oh-my-zsh.sh"
+
+# ---------------------------------------------------------------- completions
+zstyle ':completion:*' menu select
+zmodload zsh/complist
+_comp_options+=(globdots)
+zle_highlight=('paste:none')
+zstyle ':completion:*:*:docker:*' option-stacking yes
+zstyle ':completion:*:*:docker-*:*' option-stacking yes
+
+EZA_PREVIEW='eza -TFl --group-directories-first --icons --git -L 2 --no-user $realpath'
+BAT_PREVIEW='bat --color=always --style=numbers --line-range=:500 $realpath'
+zstyle ':fzf-tab:complete:cd:*'          fzf-preview $EZA_PREVIEW
+zstyle ':fzf-tab:complete:__zoxide_z:*'  fzf-preview $EZA_PREVIEW
+zstyle ':fzf-tab:complete:z:*'           fzf-preview $EZA_PREVIEW
+zstyle ':fzf-tab:complete:nvim:*'        fzf-preview $BAT_PREVIEW
+zstyle ':fzf-tab:complete:vim:*'         fzf-preview $BAT_PREVIEW
+zstyle ':fzf-tab:complete:git-(add|diff|restore):*' fzf-preview 'git diff $word | delta'
+zstyle ':fzf-tab:complete:git-log:*'  fzf-preview 'git show --color=always $word'
+zstyle ':fzf-tab:complete:git-help:*' fzf-preview 'git help $word | bat -plman --color=always'
+zstyle ':fzf-tab:complete:git-show:*' fzf-preview \
+    'case "$group" in
+    "commit tag") git show --color=always $word ;;
+    *) git show --color=always $word | delta ;;
+    esac'
+zstyle ':fzf-tab:complete:git-checkout:*' fzf-preview \
+    'case "$group" in
+    "modified file") git diff $word | delta ;;
+    "recent commit object name") git show --color=always $word | delta ;;
+    *) git log --color=always $word ;;
+    esac'
+
+(( $+commands[fzf] ))    && eval "$(fzf --zsh)"
+(( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
+(( $+commands[mise] ))   && eval "$(mise activate zsh)"
+autoload -Uz compinit && compinit
+
+# --------------------------------------------------------------- keys, the rest
+source "$ZSH_CONF/keys.zsh"
+source "$ZSH_CONF/aliases.zsh"
+source "$ZSH_CONF/functions.zsh"
+
+[[ -f ~/.config/shell/local.sh ]] && source ~/.config/shell/local.sh
