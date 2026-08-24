@@ -1,4 +1,5 @@
 # Формат: жанр<TAB>название<TAB>прямой URL потока
+
 Українське	Наше Радіо — HD	https://online.nasheradio.ua/NasheRadio_HD
 Українське	KISS FM Ukrainian — HD	https://online.kissfm.ua/KissFM_Ukr_HD
 Українське	Radio ROKS Український Рок — HD	https://online.radioroks.ua/RadioROKS_Ukr_HD
@@ -30,17 +31,24 @@
 Электроника	KISS FM Digital — HD	https://online.kissfm.ua/KissFM_Digital_HD
 Электроника	SomaFM DEF CON Radio	https://ice1.somafm.com/defcon-128-mp3
 Электроника	SomaFM The Trip	https://ice1.somafm.com/thetrip-128-mp3
+Электроника	HBR1.com - Tronic Lounge	http://ubuntu.hbr1.com:19800/tronic.ogg
+Электроника	HBR1.com - I.D.M. Tranceponder	http://ubuntu.hbr1.com:19800/trance.ogg
 
 Ambient / Chill	Radio Relax	https://online.radiorelax.ua/RadioRelax
 Ambient / Chill	Lounge FM Chill Out	https://cast.mediaonline.net.ua/chillout320
 Ambient / Chill	SomaFM Groove Salad	https://ice1.somafm.com/groovesalad-128-mp3
 Ambient / Chill	SomaFM Drone Zone	https://ice1.somafm.com/dronezone-128-mp3
 Ambient / Chill	SomaFM Deep Space One	https://ice1.somafm.com/deepspaceone-128-mp3
+Ambient / Chill	HBR1.com - Dream Factory	http://ubuntu.hbr1.com:19800/ambient.ogg
 
 Инди / Альтернатива	SomaFM Indie Pop Rocks!	https://ice1.somafm.com/indiepop-128-mp3
 Инди / Альтернатива	SomaFM Digitalis	https://ice1.somafm.com/digitalis-128-mp3
 Инди / Альтернатива	Radio Paradise Main Mix	https://stream.radioparadise.com/mp3-192
 Инди / Альтернатива	FIP Rock	https://icecast.radiofrance.fr/fiprock-midfi.mp3
+Инди / Альтернатива	Studio Brussel, Belgium	http://icecast.vrtcdn.be/stubru-high.mp3
+Инди / Альтернатива	Kink - No Alternative	http://playerservices.streamtheworld.com/api/livestream-redirect/KINK.mp3
+Инди / Альтернатива	StartFM - 94.2MHz, Vilnius University, Lithuania	http://eteris.startfm.lt/startfm.ogg
+Инди / Альтернатива	Radio Paradise (High Quality)	http://stream-dc1.radioparadise.com/rp_192m.ogg
 
 Soul / Funk / Hip-Hop	SomaFM Fluid	https://ice1.somafm.com/fluid-128-mp3
 Soul / Funk / Hip-Hop	SomaFM Seven Inch Soul	https://ice1.somafm.com/7soul-128-mp3
@@ -61,3 +69,8 @@ Reggae / World	Radio Paradise World/Etc	https://stream.radioparadise.com/world-e
 Новости / Разговорное	Українське Радіо	http://radio.ukr.radio:8000/ur1-mp3
 Новости / Разговорное	Радіо Київ 98 FM	https://cdn.vsnw.net:8943/kyiv_fm_128k
 Новости / Разговорное	Radio Ukraine International	http://radio.ukr.radio:8000/ur4-mp3
+Новости / Разговорное	wbur.org - Boston's NPR news source	http://audio.wbur.org/stream/live_ogg.m3u
+
+College Radio	WKNC 88.1 FM (NC State) HD-1	http://sc8.streammystation.com:7430/stream
+College Radio	WUVT-FM 90.7 (Virginia Tech)	https://stream.wuvt.vt.edu/wuvt.ogg
+College Radio	WSUM 91.7 FM (University of Wisconsin)	http://stream.studio.wsum.wisc.edu/wsum128
