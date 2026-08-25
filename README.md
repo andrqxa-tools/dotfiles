@@ -31,7 +31,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `A2/` | Active Oberon SDK (minia2) installers — Linux/Termux wrapper and a Windows one |
 | `Shell/bashrc` | minimal fallback bash config — zsh is the daily driver |
 | `Shell/zsh/` | zsh setup — oh-my-zsh + powerlevel10k, aliases, functions, key bindings; `install.sh` clones the third-party parts |
-| `Termux/` | Termux app settings and installer — `Ctrl-n` opens and focuses a new terminal session |
+| `Termux/` | Termux app settings and installer — `Ctrl-t` opens and focuses a new terminal session, leaving `Ctrl-n` to Neovim |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
 | `Radio/` | Console internet radio for mpv with a genre-based station catalog |
 | `YouTube/` | Console YouTube for mpv + yt-dlp — search, audio, terminal video, bookmarks |
@@ -65,7 +65,7 @@ ln -sf "$PWD/Editors/micro/settings.json" ~/.config/micro/settings.json
 # tmux (Linux/macOS) — psmux on Windows reads the same file as ~/.tmux.conf
 ln -sf "$PWD/Tmux/tmux.conf" ~/.config/tmux/tmux.conf
 
-# Termux: Ctrl-n creates and focuses a new app session; the current Vim stays put
+# Termux: Ctrl-t creates and focuses a new app session; Ctrl-n stays the file tree
 ./Termux/install.sh
 
 # IntelliJ IDEA VM options (OS-independent, version-independent)

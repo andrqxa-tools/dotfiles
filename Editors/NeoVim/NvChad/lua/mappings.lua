@@ -2,12 +2,6 @@ require "nvchad.mappings"
 
 local map = vim.keymap.set
 
--- Termux handles <C-n> at the app level to create a new terminal session.
--- Keep <leader>e free for Oberon diagnostics; Space n toggles the file tree.
-pcall(vim.keymap.del, "n", "<C-n>")
-pcall(vim.keymap.del, "n", "<leader>e")
-map("n", "<leader>n", "<cmd>NvimTreeToggle<CR>", { desc = "nvimtree toggle window" })
-
 map("n", ";", ":", { desc = "CMD enter command mode" })
 map("i", "jk", "<ESC>")
 
