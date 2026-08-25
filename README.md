@@ -48,6 +48,9 @@ ln -sf "$PWD/Editors/VSCode/settings.json" ~/.config/Code/User/settings.json
 ln -sfn "$PWD/Editors/NeoVim/NvChad/lua"          ~/.config/nvim/lua
 ln -sf  "$PWD/Editors/NeoVim/NvChad/init.lua"     ~/.config/nvim/init.lua
 ln -sf  "$PWD/Editors/NeoVim/NvChad/.stylua.toml" ~/.config/nvim/.stylua.toml
+ln -sfn "$PWD/Editors/NeoVim/NvChad/after"        ~/.config/nvim/after
+ln -sfn "$PWD/Editors/NeoVim/NvChad/ftdetect"     ~/.config/nvim/ftdetect
+ln -sfn "$PWD/Editors/NeoVim/NvChad/syntax"       ~/.config/nvim/syntax
 
 # Emacs
 ln -sf "$PWD/Editors/Emacs/.emacs.d/init.el" ~/.emacs.d/init.el
