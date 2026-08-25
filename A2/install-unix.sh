@@ -1,16 +1,48 @@
 #!/bin/sh
-# Active Oberon SDK (minia2) for Linux and Termux. Thin wrapper: upstream's installer
-# already picks the right tarball (glibc x86_64, glibc arm64, Bionic arm64) by looking at
-# the loader, so all this adds is linking the env file this repo carries.
-# Flags are passed through: --dir, --bin, --version, --tarball, --uninstall.
-set -e
+# Active Oberon SDK (minia2) for Linux and Termux.
+#
+# With no arguments, prefer a local minia2 checkout and run `task update`: a released SDK can
+# have the same date in its version banner as newer commits made later that day, which made the
+# installed language server look current while fixes such as cross-module go-to-definition were
+# still missing. Set MINIA2_CHECKOUT to name another checkout.
+#
+# With arguments, use upstream's release installer and pass them through unchanged: --dir, --bin,
+# --version, --tarball, --no-link, --uninstall.
+set -eu
 
 repo=https://raw.githubusercontent.com/active-oberon/minia2/main/sdk/install.sh
 here=$(cd "$(dirname "$0")/.." && pwd)
 
-command -v curl >/dev/null 2>&1 || { echo "curl is needed" >&2; exit 1; }
-curl -fsSL "$repo" | sh -s -- "$@"
+checkout=${MINIA2_CHECKOUT:-}
+if [ -z "$checkout" ] && [ "$#" -eq 0 ]; then
+    for candidate in \
+        "$HOME/projects/A2/minia2" \
+        "$HOME/Projects/A2/minia2" \
+        /data/Projects/A2/minia2
+    do
+        if [ -f "$candidate/Taskfile.yml" ] && [ -f "$candidate/sdk/install.sh" ]; then
+            checkout=$candidate
+            break
+        fi
+    done
+fi
+
+if [ -n "$checkout" ] && [ "$#" -eq 0 ]; then
+    [ -f "$checkout/Taskfile.yml" ] && [ -f "$checkout/sdk/install.sh" ] || {
+        echo "MINIA2_CHECKOUT is not a minia2 checkout: $checkout" >&2
+        exit 1
+    }
+    command -v task >/dev/null 2>&1 || {
+        echo "task is needed to build the local minia2 checkout: $checkout" >&2
+        exit 1
+    }
+    echo "Updating the A2 SDK from the local checkout: $checkout"
+    (cd "$checkout" && task update)
+else
+    command -v curl >/dev/null 2>&1 || { echo "curl is needed" >&2; exit 1; }
+    curl -fsSL "$repo" | sh -s -- "$@"
+fi
 
 mkdir -p "$HOME/.config/profile.d"
 ln -sfn "$here/Shell/profile.d/a2.sh" "$HOME/.config/profile.d/a2.sh"
-echo "Linked $HOME/.config/profile.d/a2.sh — A2_OB and A2_SYMS come from the next shell."
+echo "Linked $HOME/.config/profile.d/a2.sh — A2_OB, A2_SYMS and A2_STDLIB_SRC come from the next shell."

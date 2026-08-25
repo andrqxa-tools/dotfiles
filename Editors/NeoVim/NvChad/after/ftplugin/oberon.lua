@@ -80,13 +80,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
-local id = cmd and vim.lsp.start({
+local lsp_config = {
   name = "ob",
   cmd = cmd,
   root_dir = dir,
   init_options = init,
   flags = { debounce_text_changes = 500 },
-})
+}
+local id = cmd and vim.lsp.start(lsp_config)
 
 -- and if it was already attached before the autocommand existed at all
 if id then fold_here(vim.lsp.get_client_by_id(id)) end
@@ -94,9 +95,36 @@ if id then fold_here(vim.lsp.get_client_by_id(id)) end
 -- buffer-local LSP keymaps (guaranteed for .Mod even if the config manager's own
 -- LSP maps don't attach to this client)
 local o = { buffer = true, silent = true }
-vim.keymap.set("n", "K",  vim.lsp.buf.hover, o)       -- hover: type + doc
+local function oberon_hover()
+  -- Neovim's default hover is focusable: invoking it again moves the cursor into
+  -- the popup. Keep this an informational overlay instead. A second gh closes it,
+  -- and its default CursorMoved event closes it as soon as editing continues.
+  local win = vim.b.lsp_floating_preview
+  if type(win) == "number" and vim.api.nvim_win_is_valid(win) then
+    vim.api.nvim_win_close(win, true)
+    return
+  end
+  vim.lsp.buf.hover({ focusable = false, border = "rounded" })
+end
+vim.keymap.set("n", "gh", oberon_hover,
+  { buffer = true, silent = true, desc = "Oberon: hover symbol" })
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, o)  -- go to definition
 -- (also <C-]> via nvim's built-in LSP tagfunc)
+-- Keep the documented actions local to Oberon buffers. NvChad's defaults have
+-- changed over time, and its LspAttach hook is not guaranteed to see a client
+-- started directly by this ftplugin.
+vim.keymap.set("n", "<leader>ra", vim.lsp.buf.rename,
+  { buffer = true, silent = true, desc = "Oberon: rename symbol" })
+vim.keymap.set({ "n", "x" }, "<leader>ca", vim.lsp.buf.code_action,
+  { buffer = true, silent = true, desc = "Oberon: code action" })
+vim.keymap.set("n", "<leader>df", function()
+  local line = vim.api.nvim_win_get_cursor(0)[1] - 1
+  if #vim.diagnostic.get(0, { lnum = line }) == 0 then
+    vim.notify("Oberon: no diagnostics on this line", vim.log.levels.INFO)
+    return
+  end
+  vim.diagnostic.open_float(0, { scope = "line" })
+end, { buffer = true, silent = true, desc = "Oberon: diagnostic on current line" })
 -- (d) the two semantic-token modifiers the server sends: `dangerous` for everything of
 --     SYSTEM (GET, PUT, MOVE, VAL, ADR, the registers) and for HALT, UNTRACED, UNTRACKED,
 --     UNCHECKED, UNCOOPERATIVE, UNSAFE; `checks` for ASSERT. What they mark is where the
@@ -152,26 +180,23 @@ vim.keymap.set("n", "g0", function()
   end
 end, { buffer = true, silent = true, desc = "Oberon: outline (document symbols)" })  -- g0
 
--- :ObRestart -- stop the server and let it come back on the next attach. There is no
--- :LspRestart to reach for: nvim-lspconfig 2.x dropped its Lsp* commands, and this client is
--- started by this file with vim.lsp.start rather than by lspconfig, so nothing would register
--- one anyway. Needed after `task update` puts a new `ob` in place; NOT needed for a colour
--- change, which is client-side and takes effect on :e.
+-- :ObRestart -- restart the server after `task update` puts a new `ob` in place. Neovim 0.12's
+-- built-in `:lsp restart` preserves every attached buffer. If the old command already stopped
+-- the client (or it died), start it again from this buffer's config instead: merely doing `:edit`
+-- does not reload an already-applied ftplugin and therefore cannot start anything.
 vim.api.nvim_buf_create_user_command(0, "ObRestart", function()
-  local bufs = {}
-  for _, c in ipairs(vim.lsp.get_clients { name = "ob" }) do
-    for b in pairs(c.attached_buffers or {}) do
-      if vim.api.nvim_buf_is_loaded(b) then bufs[#bufs + 1] = b end
+  if #vim.lsp.get_clients { name = "ob" } > 0 then
+    vim.cmd "lsp restart ob"
+    vim.notify("ob: server restarting", vim.log.levels.INFO)
+  elseif cmd then
+    local new_id = vim.lsp.start(lsp_config, { bufnr = 0 })
+    if new_id then
+      fold_here(vim.lsp.get_client_by_id(new_id))
+      vim.notify("ob: server started", vim.log.levels.INFO)
     end
-    c:stop(true)   -- vim.lsp.stop_client is deprecated in 0.12
+  else
+    vim.notify("ob: no executable language server configured", vim.log.levels.WARN)
   end
-  -- re-running the ftplugin is what starts the client again
-  vim.schedule(function()
-    for _, b in ipairs(#bufs > 0 and bufs or { vim.api.nvim_get_current_buf() }) do
-      vim.api.nvim_buf_call(b, function() vim.cmd "edit" end)
-    end
-    vim.notify("ob: server restarted", vim.log.levels.INFO)
-  end)
 end, { desc = "Oberon: restart the language server" })
 
 -- gO: the outline as a side panel, which is what PET's Program Structure panel is. g0 above
@@ -196,7 +221,6 @@ vim.keymap.set("n", "gr", function()
     vim.lsp.buf.references()
   end
 end, { buffer = true, silent = true, desc = "Oberon: find references" })
--- rename is NVChad's existing <leader>ra (vim.lsp.buf.rename) — attaches to our client too
 
 -- <leader>rr / <leader>rb: compile and run, or just compile. `ob` finds its own runtime, so
 -- no A2SDK here. No errorformat/quickfix on purpose — the server already reports compile

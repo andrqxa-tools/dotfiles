@@ -1,4 +1,13 @@
 return {
+  -- NvChad normally lazy-loads which-key on the first leader press. On this
+  -- setup that first Space only loads the plugin and is swallowed, so the
+  -- menu appears only after pressing Space again. Load it at startup: leader
+  -- mappings then work from the very first key press.
+  {
+    "folke/which-key.nvim",
+    lazy = false,
+  },
+
   {
     "stevearc/conform.nvim",
     event = "BufWritePre", -- format on save (see configs/conform.lua)
