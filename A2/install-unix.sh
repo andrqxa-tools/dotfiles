@@ -1,10 +1,14 @@
 #!/bin/sh
 # Active Oberon SDK (minia2) for Linux and Termux.
 #
-# With no arguments, prefer a local minia2 checkout and run `task update`: a released SDK can
-# have the same date in its version banner as newer commits made later that day, which made the
-# installed language server look current while fixes such as cross-module go-to-definition were
-# still missing. Set MINIA2_CHECKOUT to name another checkout.
+# With no arguments on x86-64 Linux, prefer a local minia2 checkout and run `task update`: a
+# released SDK can have the same date in its version banner as newer commits made later that day,
+# which made the installed language server look current while fixes such as cross-module
+# go-to-definition were still missing. Set MINIA2_CHECKOUT to name another checkout explicitly.
+#
+# Termux uses the published Android/Bionic bundle instead. That bundle needs an Android NDK and is
+# cross-built by the release workflow; `task update` in a source checkout produces the ordinary
+# desktop bundle and cannot replace the native Termux SDK.
 #
 # With arguments, use upstream's release installer and pass them through unchanged: --dir, --bin,
 # --version, --tarball, --no-link, --uninstall.
@@ -14,7 +18,11 @@ repo=https://raw.githubusercontent.com/active-oberon/minia2/main/sdk/install.sh
 here=$(cd "$(dirname "$0")/.." && pwd)
 
 checkout=${MINIA2_CHECKOUT:-}
-if [ -z "$checkout" ] && [ "$#" -eq 0 ]; then
+case $(uname -m) in
+    x86_64|amd64) auto_local=1 ;;
+    *) auto_local=0 ;;
+esac
+if [ -z "$checkout" ] && [ "$#" -eq 0 ] && [ "$auto_local" -eq 1 ]; then
     for candidate in \
         "$HOME/projects/A2/minia2" \
         "$HOME/Projects/A2/minia2" \
@@ -26,6 +34,7 @@ if [ -z "$checkout" ] && [ "$#" -eq 0 ]; then
         fi
     done
 fi
+unset auto_local
 
 if [ -n "$checkout" ] && [ "$#" -eq 0 ]; then
     [ -f "$checkout/Taskfile.yml" ] && [ -f "$checkout/sdk/install.sh" ] || {
