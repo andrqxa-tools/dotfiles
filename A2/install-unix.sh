@@ -55,3 +55,18 @@ fi
 mkdir -p "$HOME/.config/profile.d"
 ln -sfn "$here/Shell/profile.d/a2.sh" "$HOME/.config/profile.d/a2.sh"
 echo "Linked $HOME/.config/profile.d/a2.sh — A2_OB, A2_SYMS and A2_STDLIB_SRC come from the next shell."
+
+# These directories are loaded by Neovim itself, outside lua/.  Keep the links here as well as in
+# README so updating a configured machine does not require copying the setup commands by hand.
+# A real directory may contain somebody's local configuration, so never replace one implicitly.
+mkdir -p "$HOME/.config/nvim"
+for part in after ftdetect syntax; do
+    source_dir=$here/Editors/NeoVim/NvChad/$part
+    target_dir=$HOME/.config/nvim/$part
+    if [ -e "$target_dir" ] && [ ! -L "$target_dir" ]; then
+        echo "Left $target_dir alone — it exists and is not a symlink." >&2
+    else
+        ln -sfn "$source_dir" "$target_dir"
+        echo "Linked $target_dir"
+    fi
+done
