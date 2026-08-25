@@ -31,7 +31,7 @@ Then symlink the pieces you need (see [Usage](#usage)).
 | `A2/` | Active Oberon SDK (minia2) installers — Linux/Termux wrapper and a Windows one |
 | `Shell/bashrc` | minimal fallback bash config — zsh is the daily driver |
 | `Shell/zsh/` | zsh setup — oh-my-zsh + powerlevel10k, aliases, functions, key bindings; `install.sh` clones the third-party parts |
-| `Termux/` | Termux app settings — `Ctrl-n` opens and focuses a new terminal session |
+| `Termux/` | Termux app settings and installer — `Ctrl-n` opens and focuses a new terminal session |
 | `Tmux/` | `tmux.conf` — shared by tmux (Linux/macOS) and psmux (Windows) |
 | `Radio/` | Console internet radio for mpv with a genre-based station catalog |
 | `YouTube/` | Console YouTube for mpv + yt-dlp — search, audio, terminal video, bookmarks |
@@ -66,9 +66,7 @@ ln -sf "$PWD/Editors/micro/settings.json" ~/.config/micro/settings.json
 ln -sf "$PWD/Tmux/tmux.conf" ~/.config/tmux/tmux.conf
 
 # Termux: Ctrl-n creates and focuses a new app session; the current Vim stays put
-mkdir -p ~/.termux
-ln -sf "$PWD/Termux/termux.properties" ~/.termux/termux.properties
-termux-reload-settings
+./Termux/install.sh
 
 # IntelliJ IDEA VM options (OS-independent, version-independent)
 export IDEA_VM_OPTIONS="$PWD/IDE/IntelliJ-IDEA/idea64.vmoptions"   # add to your shell rc
@@ -78,6 +76,10 @@ ln -sf "$PWD/Shell/profile.d/flutter.sh" ~/.config/profile.d/flutter.sh
 # then run the installer for the SDK/JDK/FVM (see Flutter/README.md):
 #   ./Flutter/setup-android-env.sh --emulator
 ```
+
+The Termux installer preserves an existing `~/.termux/termux.properties` as
+`termux.properties.pre-dotfiles` (with a numeric suffix when needed), links the
+tracked config in its place, and reloads the app settings.
 
 ```sh
 # zsh (Linux/Termux) — clones oh-my-zsh, powerlevel10k and the plugins, links ~/.zshrc
