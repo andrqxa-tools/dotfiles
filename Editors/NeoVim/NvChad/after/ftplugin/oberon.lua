@@ -227,6 +227,15 @@ end, { buffer = true, silent = true, desc = "Oberon: find references" })
 vim.keymap.set("n", "gy", vim.lsp.buf.type_definition,
   { buffer = true, silent = true, desc = "Oberon: go to type definition" })
 
+-- gS: the project's symbols by name, which is the one navigation Neovim has no default key for.
+-- Telescope's dynamic picker sends a new query per keystroke and the server re-parses the project
+-- per query, so the plain prompt -- one query, one answer -- is the kinder of the two here.
+vim.keymap.set("n", "gS", function()
+  vim.ui.input({ prompt = "Oberon symbol: " }, function(query)
+    if query and query ~= "" then vim.lsp.buf.workspace_symbol(query) end
+  end)
+end, { buffer = true, silent = true, desc = "Oberon: find a symbol in the project" })
+
 -- gi: what extends the type under the cursor, or what overrides the method. Neovim 0.11+ has
 -- `gri` for this out of the box; `gi` is here to sit next to gd/gr/gy rather than under `gr`.
 vim.keymap.set("n", "gi", vim.lsp.buf.implementation,
