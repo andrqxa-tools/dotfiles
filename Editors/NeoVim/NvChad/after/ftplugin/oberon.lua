@@ -227,6 +227,11 @@ end, { buffer = true, silent = true, desc = "Oberon: find references" })
 vim.keymap.set("n", "gy", vim.lsp.buf.type_definition,
   { buffer = true, silent = true, desc = "Oberon: go to type definition" })
 
+-- gi: what extends the type under the cursor, or what overrides the method. Neovim 0.11+ has
+-- `gri` for this out of the box; `gi` is here to sit next to gd/gr/gy rather than under `gr`.
+vim.keymap.set("n", "gi", vim.lsp.buf.implementation,
+  { buffer = true, silent = true, desc = "Oberon: go to implementation" })
+
 -- documentHighlight is a request, not a mode: the server offers it and nothing asks unless
 -- something is wired to ask. One CursorHold to request, one CursorMoved to clear, both
 -- buffer-local. If nothing lights up, the colourscheme has no LspReferenceText/Read/Write --
