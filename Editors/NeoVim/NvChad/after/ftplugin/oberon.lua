@@ -222,6 +222,26 @@ vim.keymap.set("n", "gr", function()
   end
 end, { buffer = true, silent = true, desc = "Oberon: find references" })
 
+-- gy: where the TYPE of the name under the cursor is declared -- the jump gd cannot make, since
+-- on a variable it answers the variable. `gy` is what coc and telescope use for it.
+vim.keymap.set("n", "gy", vim.lsp.buf.type_definition,
+  { buffer = true, silent = true, desc = "Oberon: go to type definition" })
+
+-- documentHighlight is a request, not a mode: the server offers it and nothing asks unless
+-- something is wired to ask. One CursorHold to request, one CursorMoved to clear, both
+-- buffer-local. If nothing lights up, the colourscheme has no LspReferenceText/Read/Write --
+-- `:hi LspReferenceText` says so, and that is a theme setting, not a server one.
+local ob_highlight = vim.api.nvim_create_augroup("OberonDocumentHighlight", { clear = false })
+vim.api.nvim_clear_autocmds({ group = ob_highlight, buffer = 0 })
+vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+  group = ob_highlight, buffer = 0,
+  callback = function() pcall(vim.lsp.buf.document_highlight) end,
+})
+vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "InsertLeave" }, {
+  group = ob_highlight, buffer = 0,
+  callback = function() pcall(vim.lsp.buf.clear_references) end,
+})
+
 -- <leader>rr / <leader>rb: compile and run, or just compile. `ob` finds its own runtime, so
 -- no A2SDK here. No errorformat/quickfix on purpose — the server already reports compile
 -- errors in the buffer, and a second channel for the same diagnostics is noise.
