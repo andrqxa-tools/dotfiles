@@ -236,3 +236,56 @@ vim.keymap.set("n", "<leader>rr", "<Cmd>!" .. obrun .. " run %<CR>",
   { buffer = true, desc = "Oberon: run this module" })
 vim.keymap.set("n", "<leader>rb", "<Cmd>!" .. obrun .. " build % -o " .. obtmp .. "/%:t:r<CR>",
   { buffer = true, desc = "Oberon: build to $TMPDIR" })
+
+-- <leader>rt / <leader>rT: the {TEST} procedures of this module, all of them or just the one the
+-- cursor is in. This one DOES use an errorformat, unlike rr/rb above: `ob test` reports a failing
+-- harvested test a second time as `<file>:<line>: FAIL <Module>.<Proc>`, so the quickfix list
+-- lands on the failing test's declaration and nothing has to be written per editor. Everything
+-- else ob prints is dropped by the format, or a green run would fill the list with "ok" lines.
+--
+-- The line is the declaration, not the failing statement: a trap prints a code offset after the
+-- procedure name, and there is no line table to turn one into a line. The trap itself is in the
+-- run's output, which is why the summary is echoed either way.
+-- The second half, `%-G%.%#`, is not decoration: without a discard rule every other line of the
+-- run becomes a fileless quickfix entry, and the list is the whole transcript.
+local obtest_efm = "%f:%l: FAIL %m,%-G%.%#"
+
+-- The {TEST} procedure the cursor is in: the nearest one at or above it. `<cword>` would only do
+-- with the cursor on the name itself, and the point is to run the test being edited.
+local function oberon_test_above()
+  local at = vim.fn.search([[PROCEDURE\s*{TEST}]], "bcnW")
+  if at == 0 then return nil end
+  local name = vim.fn.matchstr(vim.fn.getline(at), [[{TEST}\s*\zs\w\+]])
+  if name == "" then return nil end
+  return name
+end
+
+local function oberon_run_tests(one)
+  local command = obrun .. " test " .. vim.fn.shellescape(vim.fn.expand("%:p"))
+  if one then
+    local name = oberon_test_above()
+    if not name then
+      vim.notify("no {TEST} procedure at or above the cursor", vim.log.levels.WARN)
+      return
+    end
+    command = command .. " -r " .. vim.fn.shellescape(name)
+  end
+  local output = vim.fn.systemlist(command)
+  vim.fn.setqflist({}, " ", { title = "ob test", lines = output, efm = obtest_efm })
+  local summary = ""
+  for _, text in ipairs(output) do
+    if text:match("^ob test: %d+ case") then summary = text end
+  end
+  if #vim.fn.getqflist() > 0 then
+    vim.cmd("copen")
+    vim.cmd("cfirst")
+  else
+    vim.cmd("cclose")
+  end
+  vim.notify(summary ~= "" and summary or (output[#output] or "ob test said nothing"))
+end
+
+vim.keymap.set("n", "<leader>rt", function() oberon_run_tests(false) end,
+  { buffer = true, desc = "Oberon: run this module's {TEST} procedures" })
+vim.keymap.set("n", "<leader>rT", function() oberon_run_tests(true) end,
+  { buffer = true, desc = "Oberon: run the {TEST} procedure under the cursor" })
