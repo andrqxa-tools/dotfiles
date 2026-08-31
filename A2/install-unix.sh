@@ -25,8 +25,7 @@ esac
 if [ -z "$checkout" ] && [ "$#" -eq 0 ] && [ "$auto_local" -eq 1 ]; then
     for candidate in \
         "$HOME/projects/A2/minia2" \
-        "$HOME/Projects/A2/minia2" \
-        /data/Projects/A2/minia2
+        "$HOME/Projects/A2/minia2"
     do
         if [ -f "$candidate/Taskfile.yml" ] && [ -f "$candidate/sdk/install.sh" ]; then
             checkout=$candidate

@@ -7,14 +7,13 @@
 #
 # Already present on the machine (verified):
 #   * Flutter 3.41.6 in /opt/programming/flutter (projects pin 3.38.5 via FVM)
-#   * OpenJDK 21 — but that is a JRE, no javac (Gradle needs a full JDK 17)
+#   * No JDK at all on Debian 13; on Ubuntu it was a JRE 21 without javac
 #
 # What is missing and what this script installs:
 #   1. JDK 17         (the project's Gradle/Kotlin toolchain targets Java 17)
 #   2. Android SDK    (cmdline-tools, platform-tools/adb, platforms 35+36,
 #                      build-tools, NDK 28.2.13676358) — currently absent.
-#                      Installed on /data (HDD, 363G): the system SSD (/) is
-#                      nearly full.
+#                      Installed under /opt/programming, next to flutter and go.
 #   3. FVM + Flutter 3.38.5 (the version pinned in .fvmrc of both projects)
 #   4. (opt.) emulator: system image API 34 + a ready-to-use AVD
 #
@@ -34,19 +33,19 @@
 #
 # The script is idempotent: re-running it breaks nothing. If an earlier run did
 # go through sudo, the SDK/FVM-cache ownership is repaired automatically.
-# Targets Ubuntu 24.04 (apt). Uses sudo only for apt packages.
+# Targets Ubuntu 24.04 and Debian 13 (apt). Uses sudo only for apt packages;
+# JDK 17 comes from openjdk on Ubuntu and from Adoptium on Debian.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
 # ------------------------------ settings ------------------------------------
-# The system SSD (/) is small — ~28G free. The bulky SDK parts (NDK ~2.5G,
-# platforms, emulator image) go to /data (HDD, but 363G free). $HOME is on /
-# too, so the default $HOME/Android/Sdk would fill the SSD.
+# The SDK lives under /opt/programming (user-owned, next to flutter/go/deno)
+# rather than $HOME/Android/Sdk, so every third-party toolchain sits in one place.
 # Override with: ANDROID_SDK_DIR=...
-ANDROID_SDK_DIR="${ANDROID_SDK_DIR:-/data/Android/Sdk}"
-# Each Flutter version in FVM is ~1.7G — moved to /data as well. The fvm binary
-# itself (a few MB) stays in ~/.pub-cache, which is not a space concern.
-export FVM_CACHE_PATH="${FVM_CACHE_PATH:-/data/Android/fvm}"
+ANDROID_SDK_DIR="${ANDROID_SDK_DIR:-/opt/programming/Android/Sdk}"
+# Each Flutter version in FVM is ~1.7G — kept beside the SDK. The fvm binary
+# itself (a few MB) stays in ~/.pub-cache.
+export FVM_CACHE_PATH="${FVM_CACHE_PATH:-/opt/programming/Android/fvm}"
 CMDLINE_TOOLS_ZIP_URL="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
 
 # Versions taken from minitok_clean/android/app/build.gradle
@@ -130,13 +129,31 @@ fix_ownership() {
 # --------------------------- 1. JDK 17 --------------------------------------
 install_jdk17() {
   log "JDK 17"
-  if [ -x /usr/lib/jvm/java-17-openjdk-amd64/bin/javac ]; then
-    ok "JDK 17 already installed"
-    return
+  for jdk in /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/temurin-17-jdk-amd64; do
+    if [ -x "$jdk/bin/javac" ]; then
+      ok "JDK 17 already installed ($jdk)"
+      return
+    fi
+  done
+
+  # Ubuntu ships openjdk-17-jdk; Debian 13 dropped it (only 21 and 25 remain), so
+  # there Temurin is the only apt source for the version the project pins.
+  if apt-cache show openjdk-17-jdk >/dev/null 2>&1; then
+    warn "No JDK 17 found. Installing openjdk-17-jdk..."
+    sudo apt-get update -y
+    sudo apt-get install -y openjdk-17-jdk
+  else
+    warn "No openjdk-17 in this distro. Installing Temurin 17 from Adoptium..."
+    sudo install -d -m 0755 /etc/apt/keyrings
+    [ -s /etc/apt/keyrings/adoptium.asc ] || \
+      curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public \
+        | sudo tee /etc/apt/keyrings/adoptium.asc >/dev/null
+    . /etc/os-release
+    printf 'Types: deb\nURIs: https://packages.adoptium.net/artifactory/deb\nSuites: %s\nComponents: main\nArchitectures: amd64\nSigned-By: /etc/apt/keyrings/adoptium.asc\n' \
+      "$VERSION_CODENAME" | sudo tee /etc/apt/sources.list.d/adoptium.sources >/dev/null
+    sudo apt-get update -y
+    sudo apt-get install -y temurin-17-jdk
   fi
-  warn "Only JRE 21 found (no javac). Installing openjdk-17-jdk..."
-  sudo apt-get update -y
-  sudo apt-get install -y openjdk-17-jdk
   ok "JDK 17 installed"
 }
 
@@ -251,9 +268,8 @@ ensure_kvm() {
 }
 
 # ---------------------------- 6. AVD (emulator) -----------------------------
-# The AVD (the running emulator's image) is deliberately left in ~/.android/avd
-# on the SSD — it is what determines how smooth the emulator feels; the SDK
-# itself still lives on /data (HDD).
+# The AVD (the running emulator's image) is deliberately left in ~/.android/avd:
+# that path is what determines how smooth the emulator feels.
 create_avd() {
   [ "$INSTALL_EMULATOR" = true ] || return
   log "Creating AVD '$AVD_NAME'"

@@ -40,7 +40,7 @@ GO_HOME=/opt/programming     # parent dir for the toolchain
 GOROOT="$GO_HOME/go"
 GOPATH="$HOME/go"
 GOCACHE="$HOME/.cache/go-build"
-GOTMPDIR="/data/$(id -un)/tmp"
+GOTMPDIR="$HOME/tmp"
 OWNER="$(id -un):$(id -gn)"
 
 ENV_DIR="$HOME/.config/profile.d"
@@ -143,7 +143,7 @@ set -gx GOROOT /opt/programming/go
 set -gx GOPATH $HOME/go
 set -gx GOMODCACHE $GOPATH/pkg/mod
 set -gx GOCACHE $HOME/.cache/go-build
-set -gx GOTMPDIR /data/(id -un)/tmp
+set -gx GOTMPDIR $HOME/tmp
 fish_add_path $GOROOT/bin $GOPATH/bin
 EOF
   echo "  wrote $fish_dir/go.fish"
