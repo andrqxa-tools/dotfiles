@@ -1,7 +1,7 @@
 {
   "Ctrl-s": "Save",
   "Ctrl-q": "Quit",
-  "Ctrl-b": "ToggleSidebar",
+  "Ctrl-b": "command:tree",
   "Ctrl-p": "CommandMode",
 
   "Ctrl-f": "Find",
