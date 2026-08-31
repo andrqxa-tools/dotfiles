@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+#
+# git-sync-all — walk the immediate subdirectories of a directory and update every
+# clean git repository. Never merges, never rebases, never stashes: each branch is
+# advanced only if it is a fast-forward. Anything that could not be advanced is
+# listed at the end.
+#
+# Usage: git-sync-all [DIR] [--strict] [--no-tags] [-q]
+#
+#   DIR         directory whose subdirectories are scanned (default: current dir)
+#   --strict    untracked files also count as "not clean" (default: they do not)
+#   --no-tags   do not fetch tags
+#   -q          only print the final report
+#
+# Exit code: 0 if every repo is now up to date, 1 if the "not updated" list is non-empty.
+
+set -uo pipefail
+
+DIR="."
+STRICT=0
+FETCH_TAGS="--tags"
+QUIET=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --strict)  STRICT=1 ;;
+    --no-tags) FETCH_TAGS="" ;;
+    -q|--quiet) QUIET=1 ;;
+    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) echo "unknown option: $arg" >&2; exit 2 ;;
+    *)  DIR="$arg" ;;
+  esac
+done
+
+[[ -d "$DIR" ]] || { echo "not a directory: $DIR" >&2; exit 2; }
+
+if [[ -t 1 ]]; then
+  C_RESET=$'\033[0m'; C_RED=$'\033[31m'; C_GREEN=$'\033[32m'
+  C_YELLOW=$'\033[33m'; C_DIM=$'\033[2m'; C_BOLD=$'\033[1m'
+else
+  C_RESET=''; C_RED=''; C_GREEN=''; C_YELLOW=''; C_DIM=''; C_BOLD=''
+fi
+
+say()  { (( QUIET )) || printf '%s\n' "$*"; }
+head_line() { (( QUIET )) || printf '%s%s%s\n' "$C_BOLD" "$*" "$C_RESET"; }
+
+# Repos that ended the run not fully advanced: "name<TAB>reason".
+declare -a SKIPPED=()
+declare -a ADVANCED=()
+declare -a UPTODATE=()
+declare -a NOTES=()
+NON_REPO=0
+
+skip() { SKIPPED+=("$1"$'\t'"$2"); }
+
+for path in "$DIR"/*/; do
+  [[ -d "$path" ]] || continue
+  name="$(basename "$path")"
+
+  # A repo *root* only. `rev-parse` alone succeeds from any subdirectory, so running
+  # this inside one big repo would otherwise treat every module dir as its own repo
+  # and pull the same parent N times. Comparing top-levels also accepts a linked
+  # worktree (its `.git` is a file, and its toplevel is itself).
+  toplevel="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -z "$toplevel" ]] || [[ "$(realpath "$path")" != "$(realpath "$toplevel")" ]]; then
+    NON_REPO=$((NON_REPO + 1))
+    continue
+  fi
+
+  head_line "== $name"
+
+  # --- 1. working tree state -------------------------------------------------
+  status="$(git -C "$path" status --porcelain 2>/dev/null)"
+  if [[ -n "$status" ]]; then
+    tracked="$(printf '%s\n' "$status" | grep -v '^??' || true)"
+    if [[ -n "$tracked" ]]; then
+      n=$(printf '%s\n' "$tracked" | grep -c . || true)
+      say "  ${C_RED}dirty${C_RESET} — $n tracked change(s), skipped"
+      skip "$name" "dirty working tree ($n tracked change(s))"
+      continue
+    fi
+    if (( STRICT )); then
+      say "  ${C_RED}untracked files${C_RESET} (--strict), skipped"
+      skip "$name" "untracked files (--strict)"
+      continue
+    fi
+    say "  ${C_DIM}untracked files present — pulling anyway${C_RESET}"
+  fi
+
+  # --- 2. a remote to pull from? -------------------------------------------
+  if [[ -z "$(git -C "$path" remote 2>/dev/null)" ]]; then
+    say "  ${C_DIM}no remote — nothing to pull${C_RESET}"
+    skip "$name" "no remote configured"
+    continue
+  fi
+
+  # --- 3. fetch everything -------------------------------------------------
+  if ! fetch_err="$(git -C "$path" fetch --all --prune $FETCH_TAGS 2>&1 >/dev/null)"; then
+    first="$(printf '%s\n' "$fetch_err" | head -1)"
+    say "  ${C_RED}fetch failed${C_RESET} — $first"
+    skip "$name" "fetch failed: $first"
+    continue
+  fi
+
+  # --- 4. fast-forward every branch that tracks a remote -------------------
+  current="$(git -C "$path" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+  repo_moved=0
+  declare -a repo_problems=()   # blocking: the repo did NOT get the remote's commits
+  declare -a repo_notes=()      # informational: nothing to pull for that branch
+
+  while IFS=$'\t' read -r branch upstream; do
+    [[ -n "$branch" ]] || continue
+    if [[ -z "$upstream" ]]; then
+      # A local-only branch (feature work, a worktree branch) has nothing to pull.
+      # Not a failure — do not let it mark the whole repo as not updated.
+      repo_notes+=("$branch: local only, no upstream")
+      continue
+    fi
+    if ! git -C "$path" rev-parse --verify --quiet "$upstream" >/dev/null; then
+      repo_problems+=("$branch: upstream $upstream is gone")
+      continue
+    fi
+
+    local_sha="$(git -C "$path" rev-parse "$branch")"
+    remote_sha="$(git -C "$path" rev-parse "$upstream")"
+    [[ "$local_sha" == "$remote_sha" ]] && continue
+
+    # Diverged (local commits the remote does not have) => not a fast-forward.
+    if ! git -C "$path" merge-base --is-ancestor "$local_sha" "$remote_sha"; then
+      ahead="$(git -C "$path" rev-list --count "$upstream..$branch")"
+      repo_problems+=("$branch: diverged, $ahead local commit(s) not on $upstream")
+      continue
+    fi
+
+    behind="$(git -C "$path" rev-list --count "$branch..$upstream")"
+    if [[ "$branch" == "$current" ]]; then
+      if err="$(git -C "$path" merge --ff-only "$upstream" 2>&1 >/dev/null)"; then
+        say "  ${C_GREEN}+$behind${C_RESET} $branch"
+        repo_moved=1
+      else
+        repo_problems+=("$branch: $(printf '%s\n' "$err" | head -1)")
+      fi
+    else
+      # `git fetch .` without a leading '+' refuses a non-fast-forward, and it
+      # updates a branch that is not checked out without touching the work tree.
+      if err="$(git -C "$path" fetch . "refs/remotes/$upstream:refs/heads/$branch" 2>&1 >/dev/null)"; then
+        say "  ${C_GREEN}+$behind${C_RESET} $branch ${C_DIM}(not checked out)${C_RESET}"
+        repo_moved=1
+      else
+        repo_problems+=("$branch: $(printf '%s\n' "$err" | head -1)")
+      fi
+    fi
+  done < <(git -C "$path" for-each-ref --format='%(refname:short)%09%(upstream:short)' refs/heads/)
+
+  if [[ -z "$current" ]]; then
+    repo_notes+=("HEAD is detached — no checked-out branch to advance")
+  fi
+
+  for n in "${repo_notes[@]-}"; do
+    [[ -n "$n" ]] && { say "  ${C_DIM}· $n${C_RESET}"; NOTES+=("$name"$'\t'"$n"); }
+  done
+
+  if (( ${#repo_problems[@]} )); then
+    for p in "${repo_problems[@]}"; do
+      say "  ${C_YELLOW}!${C_RESET} $p"
+    done
+    skip "$name" "$(IFS='; '; echo "${repo_problems[*]}")"
+  elif (( repo_moved )); then
+    ADVANCED+=("$name")
+  else
+    say "  ${C_DIM}already up to date${C_RESET}"
+    UPTODATE+=("$name")
+  fi
+  unset repo_problems repo_notes
+done
+
+# --- report ----------------------------------------------------------------
+printf '\n%s%s%s\n' "$C_BOLD" "── summary ──" "$C_RESET"
+printf 'scanned:      %d repo(s)' "$(( ${#ADVANCED[@]} + ${#UPTODATE[@]} + ${#SKIPPED[@]} ))"
+(( NON_REPO )) && printf ' (%d non-repo dir(s) ignored)' "$NON_REPO"
+printf '\n'
+printf 'pulled:       %d\n' "${#ADVANCED[@]}"
+printf 'up to date:   %d\n' "${#UPTODATE[@]}"
+printf 'not updated:  %d\n' "${#SKIPPED[@]}"
+
+if (( ${#NOTES[@]} )) && (( ! QUIET )); then
+  printf '\n%snotes%s (nothing to pull there — not a failure)\n' "$C_DIM" "$C_RESET"
+  for row in "${NOTES[@]}"; do
+    printf '  %-32s %s\n' "${row%%$'\t'*}" "${row#*$'\t'}"
+  done
+fi
+
+if (( ${#SKIPPED[@]} )); then
+  printf '\n%sNOT UPDATED%s\n' "$C_RED$C_BOLD" "$C_RESET"
+  for row in "${SKIPPED[@]}"; do
+    printf '  %s%-32s%s %s\n' "$C_BOLD" "${row%%$'\t'*}" "$C_RESET" "${row#*$'\t'}"
+  done
+  exit 1
+fi
+
+exit 0
