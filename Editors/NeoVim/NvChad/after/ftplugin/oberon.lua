@@ -7,12 +7,34 @@
 --     not installed, so this config still works on a machine without it.
 pcall(vim.treesitter.start)
 
--- (b) show the FULL diagnostic text inline, on lines under the cursor's line.
+-- (b) the debug adapter: `ob dap`, the same binary as the language server. nvim-dap is a
+--     dependency of the Go setup and is registered here for oberon too, so the keys already
+--     bound to it (<leader>db breakpoint, <leader>dc continue, <leader>do step over,
+--     <leader>du the panels) work in a .Mod buffer. Registering per buffer is idempotent.
+local hasDap, dap = pcall(require, "dap")
+if hasDap then
+  dap.adapters.ob = {
+    type = "executable",
+    command = vim.env.A2_OB ~= "" and vim.env.A2_OB or "ob",
+    args = { "dap" },
+  }
+  dap.configurations.oberon = {
+    {
+      type = "ob",
+      request = "launch",
+      name = "Run this module",
+      program = "${file}",
+      procedure = "Do",
+    },
+  }
+end
+
+-- (c) show the FULL diagnostic text inline, on lines under the cursor's line.
 --     NOTE: vim.diagnostic.config is global — this affects all filetypes once an
 --     oberon buffer is opened. Drop this line if you don't want that.
 vim.diagnostic.config({ virtual_lines = { current_line = true } })
 
--- (c) live diagnostics: --live re-checks on every change; debounced 500ms so it
+-- (d) live diagnostics: --live re-checks on every change; debounced 500ms so it
 --     updates after you pause typing instead of flickering. Drop "--live" (and
 --     the flags line) to go back to on-open/on-save only.
 local dir = vim.fs.dirname(vim.api.nvim_buf_get_name(0)) or vim.fn.getcwd()
@@ -61,7 +83,7 @@ else
   vim.list_extend(cmd, { "minia2-sdk", "lsp", "--live" })
 end
 
--- (d) folding from the server: procedures, records and objects, blocks, REPEAT/UNTIL,
+-- (e) folding from the server: procedures, records and objects, blocks, REPEAT/UNTIL,
 --     the IMPORT list and multi-line comments. Turned on only when the client says it
 --     can do it, so an older SDK (or the image) is left alone.
 local function fold_here(client)
@@ -131,7 +153,7 @@ vim.keymap.set("n", "<leader>df", function()
   end
   vim.diagnostic.open_float(0, { scope = "line" })
 end, { buffer = true, silent = true, desc = "Oberon: diagnostic on current line" })
--- (e) the two semantic-token modifiers the server sends: `dangerous` for everything of
+-- (f) the two semantic-token modifiers the server sends: `dangerous` for everything of
 --     SYSTEM (GET, PUT, MOVE, VAL, ADR, the registers) and for HALT, UNTRACED, UNTRACKED,
 --     UNCHECKED, UNCOOPERATIVE, UNSAFE; `checks` for ASSERT. What they mark is where the
 --     program stops being a checked program, which is the one thing A2's own editor
@@ -149,9 +171,20 @@ end, { buffer = true, silent = true, desc = "Oberon: diagnostic on current line"
 --     a near-white word, which also says the right thing -- it marks a REGION where the
 --     language stopped being checked, not a word that happens to be a keyword. `checks` is
 --     cyan, the one hue nothing else in this theme uses.
+--
+--     The third line is not a modifier but a tree-sitter capture: the `#IF … THEN` and `#END`
+--     lines of conditional compilation. It is here for the same reason and by the same logic.
+--     The grammar can only parse ONE branch and takes the first, which is NOT the branch the
+--     compiler takes -- with no -D definitions every condition is false, so the #ELSE is what
+--     gets compiled, and the server proves it by resolving symbols there and nowhere in the
+--     #IF branch. So neither half may be dimmed; what helps instead is seeing the frame. A
+--     background again, for the reason the paragraph above gives, but a neutral slate rather
+--     than a hue: the line is structure, not code. #ELSE stays plain -- it is the first line
+--     of the run the scanner swallowed, so no capture reaches it.
 local function oberon_token_colours()
   vim.api.nvim_set_hl(0, "@lsp.mod.dangerous.oberon", { fg = "#ffd9d0", bg = "#5c1f26", bold = true })
   vim.api.nvim_set_hl(0, "@lsp.mod.checks.oberon", { fg = "#2bbac5", bold = true })
+  vim.api.nvim_set_hl(0, "@keyword.directive.oberon", { fg = "#d0d4dc", bg = "#3a3f4b", bold = true })
 end
 
 --     Set on every .Mod that opens, not once behind a flag: nvim_set_hl is cheap, and a flag

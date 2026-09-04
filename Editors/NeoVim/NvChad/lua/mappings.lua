@@ -14,11 +14,19 @@ map("n", "<C-j>", "<cmd>TmuxNavigateDown<CR>", { desc = "window/tmux down" })
 map("n", "<C-k>", "<cmd>TmuxNavigateUp<CR>", { desc = "window/tmux up" })
 map("n", "<C-l>", "<cmd>TmuxNavigateRight<CR>", { desc = "window/tmux right" })
 
--- Go debugging (nvim-dap / nvim-dap-go)
+-- Debugging (nvim-dap). Language-agnostic: Go through dap-go, Active Oberon through
+-- `ob dap`, which after/ftplugin/oberon.lua registers for the oberon filetype.
 map("n", "<leader>db", function() require("dap").toggle_breakpoint() end, { desc = "DAP toggle breakpoint" })
-map("n", "<leader>dc", function() require("dap").continue() end, { desc = "DAP continue" })
+map("n", "<leader>dB", function() require("dap").clear_breakpoints() end, { desc = "DAP clear all breakpoints" })
+map("n", "<leader>dc", function() require("dap").continue() end, { desc = "DAP continue (starts the session)" })
 map("n", "<leader>do", function() require("dap").step_over() end, { desc = "DAP step over" })
 map("n", "<leader>di", function() require("dap").step_into() end, { desc = "DAP step into" })
+map("n", "<leader>dO", function() require("dap").step_out() end, { desc = "DAP step out" })
+map("n", "<leader>dl", function() require("dap").run_last() end, { desc = "DAP run last configuration" })
+map("n", "<leader>dt", function() require("dap").terminate() end, { desc = "DAP terminate session" })
+-- The program's own output lands in [dap-repl], which outlives the panels dap-ui closes.
+-- toggle, not open: the same key has to put it away again.
+map("n", "<leader>dr", function() require("dap").repl.toggle() end, { desc = "DAP toggle REPL / output" })
 map("n", "<leader>dgt", function() require("dap-go").debug_test() end, { desc = "DAP debug Go test" })
 map("n", "<leader>dgl", function() require("dap-go").debug_last() end, { desc = "DAP debug last Go test" })
 map("n", "<leader>du", function() require("dapui").toggle() end, { desc = "DAP toggle UI" })

@@ -28,6 +28,16 @@ elif (( $+commands[xclip] )); then
     export CLIPCOPY='xclip -selection clipboard' CLIPPASTE='xclip -selection clipboard -o'
 fi
 
+# X11 cookie: a tmux server that started before the graphical session hands its panes DISPLAY
+# with no XAUTHORITY, and an X11 client then finds :0 and is refused by it. Mutter names
+# Xwayland's cookie file afresh every session, so the newest match and never a fixed path.
+# Unreadable covers both ways this goes wrong: unset, and a path left from a session that ended. A readable one is somebody's deliberate choice and is left alone.
+if [[ ! -r ${XAUTHORITY:-/nonexistent} ]]; then
+    _xauth=( /run/user/${UID}/.mutter-Xwaylandauth.*(Nom) )
+    (( $#_xauth )) && export XAUTHORITY=$_xauth[1]
+    unset _xauth
+fi
+
 export FZF_DEFAULT_COMMAND='fd --hidden --follow --exclude=.git --exclude=node_modules'
 export FZF_CTRL_T_COMMAND='fd -t f -HF -E=.git -E=node_modules'
 export FZF_COMPLETION_TRIGGER=','
