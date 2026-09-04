@@ -95,8 +95,11 @@ for path in "$DIR"/*/; do
   fi
 
   # --- 3. fetch everything -------------------------------------------------
-  if ! fetch_err="$(git -C "$path" fetch --all --prune $FETCH_TAGS 2>&1 >/dev/null)"; then
-    first="$(printf '%s\n' "$fetch_err" | head -1)"
+  if ! fetch_err="$(git -C "$path" fetch --all --prune --force $FETCH_TAGS 2>&1 >/dev/null)"; then
+    # `--all` prints "Fetching <remote>"/"From <url>" on stderr, so line 1 is a
+    # header, not the failure. Report the first line that actually says something.
+    first="$(printf '%s\n' "$fetch_err" | grep -v -e '^Fetching ' -e '^From ' | head -1)"
+    first="${first:-$(printf '%s\n' "$fetch_err" | head -1)}"
     say "  ${C_RED}fetch failed${C_RESET} — $first"
     skip "$name" "fetch failed: $first"
     continue
